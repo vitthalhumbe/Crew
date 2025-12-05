@@ -6,7 +6,6 @@ import 'ui/onboarding/onboarding_screen.dart';
 import 'ui/auth/login_screen.dart';
 import 'ui/auth/create_account_screen.dart';
 import 'ui/auth/forgot_password_screen.dart';
-
 class AppRouter {
   static const String splash = '/';
   static const String onboarding = '/onboarding';

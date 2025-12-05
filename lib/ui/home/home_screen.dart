@@ -50,7 +50,7 @@ class HomeScreen extends StatelessWidget {
                     child: _statCard(
                       context,
                       icon: Icons.check_circle_outline,
-                      iconColor: Colors.blue,
+                      iconColor: Theme.of(context).colorScheme.primary,
                       count: "12",
                       label: "Task completed",
                     ),
@@ -62,7 +62,7 @@ class HomeScreen extends StatelessWidget {
                     child: _statCard(
                       context,
                       icon: Icons.rocket_launch_outlined,
-                      iconColor: Colors.purple,
+                      iconColor: Theme.of(context).colorScheme.secondary,
                       count: "3",
                       label: "Joined Crew",
                     ),

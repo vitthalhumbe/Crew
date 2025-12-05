@@ -21,22 +21,21 @@ class CrewApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-  debugShowCheckedModeBanner: false,
+      debugShowCheckedModeBanner: false,
 
-  theme: AppTheme.light,
-  darkTheme: AppTheme.dark,
-  themeMode: ThemeMode.system,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.system,
 
-  initialRoute: '/',
-  routes: {
-    '/': (context) => const SplashScreen(),
-    '/onboarding': (context) => const OnboardingScreen(),
-    '/login': (context) => const LoginScreen(),
-    '/createAccount': (context) => const CreateAccountScreen(),
-    '/forgotPassword': (context) => const ForgotPasswordScreen(),
-    '/mainShell': (context) => const MainShell(),
-  },
-);
-
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const SplashScreen(),
+        '/onboarding': (context) => const OnboardingScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/createAccount': (context) => const CreateAccountScreen(),
+        '/forgotPassword': (context) => const ForgotPasswordScreen(),
+        '/mainShell': (context) => const MainShell(),
+      },
+    );
   }
 }
