@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CreateAccountScreen extends StatefulWidget {
   const CreateAccountScreen({super.key});
@@ -15,6 +17,56 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
   bool obscurePassword = true;
   bool acceptTerms = false;
+  bool isLoading = false;
+
+  Future<void> _createAccount() async {
+    if (!acceptTerms) return;
+
+    setState(() => isLoading = true);
+
+    try {
+      // 1️⃣ CREATE USER (Firebase Auth)
+      UserCredential userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+      User? user = userCredential.user;
+
+      if (user == null) throw Exception("User creation failed");
+
+      // 2️⃣ SAVE USER DATA TO FIRESTORE
+      await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
+        "uid": user.uid,
+        "name": nameController.text.trim(),
+        "email": emailController.text.trim(),
+        "bio": bioController.text.trim(),
+        "createdAt": DateTime.now(),
+      });
+
+      // 3️⃣ MOVE TO MAIN APP
+      Navigator.pushReplacementNamed(context, "/mainShell");
+    } on FirebaseAuthException catch (e) {
+      String msg = "Signup failed";
+
+      if (e.code == "email-already-in-use") {
+        msg = "This email is already registered.";
+      } else if (e.code == "weak-password") {
+        msg = "Choose a stronger password.";
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Unexpected error occurred.")),
+      );
+    }
+
+    setState(() => isLoading = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,10 +78,8 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               const SizedBox(height: 10),
 
-              // TITLE
               Text(
                 "Create Account",
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -39,7 +89,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
               const SizedBox(height: 25),
 
-              // PROFILE IMAGE PLACEHOLDER
               Center(
                 child: Stack(
                   children: [
@@ -53,7 +102,8 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                       right: 0,
                       child: CircleAvatar(
                         radius: 18,
-                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        backgroundColor:
+                            Theme.of(context).colorScheme.primary,
                         child: const Icon(Icons.camera_alt,
                             size: 18, color: Colors.white),
                       ),
@@ -65,42 +115,38 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
               const SizedBox(height: 30),
 
               // NAME
-              Text("Name", style: Theme.of(context).textTheme.labelLarge),
-              const SizedBox(height: 6),
+              _label("Name"),
               TextField(
                 controller: nameController,
-                decoration: inputStyle("Enter your name"),
+                decoration: _input("Enter your name"),
               ),
 
               const SizedBox(height: 20),
 
               // EMAIL
-              Text("Email", style: Theme.of(context).textTheme.labelLarge),
-              const SizedBox(height: 6),
+              _label("Email"),
               TextField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
-                decoration: inputStyle("Enter your email"),
+                decoration: _input("Enter your email"),
               ),
 
               const SizedBox(height: 20),
 
               // PASSWORD
-              Text("Password", style: Theme.of(context).textTheme.labelLarge),
-              const SizedBox(height: 6),
+              _label("Password"),
               TextField(
                 controller: passwordController,
                 obscureText: obscurePassword,
-                decoration: inputStyle("Enter your password").copyWith(
+                decoration: _input("Enter your password").copyWith(
                   suffixIcon: IconButton(
-                    icon: Icon(obscurePassword
-                        ? Icons.visibility_off
-                        : Icons.visibility),
-                    onPressed: () {
-                      setState(() {
-                        obscurePassword = !obscurePassword;
-                      });
-                    },
+                    icon: Icon(
+                      obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed: () =>
+                        setState(() => obscurePassword = !obscurePassword),
                   ),
                 ),
               ),
@@ -108,12 +154,11 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
               const SizedBox(height: 20),
 
               // BIO
-              Text("Bio", style: Theme.of(context).textTheme.labelLarge),
-              const SizedBox(height: 6),
+              _label("Bio"),
               TextField(
                 controller: bioController,
                 maxLines: 3,
-                decoration: inputStyle("Tell us a bit about yourself"),
+                decoration: _input("Tell us a bit about yourself"),
               ),
 
               const SizedBox(height: 20),
@@ -123,73 +168,46 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                 children: [
                   Checkbox(
                     value: acceptTerms,
-                    activeColor: Theme.of(context).colorScheme.primary,
-                    onChanged: (value) {
-                      setState(() {
-                        acceptTerms = value!;
-                      });
-                    },
+                    onChanged: (value) =>
+                        setState(() => acceptTerms = value!),
                   ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        // Later → open T&C page
-                      },
-                      child: const Text.rich(
-                        TextSpan(
-                          text: "I accept the ",
-                          children: [
-                            TextSpan(
-                              text: "terms & conditions*",
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            )
-                          ],
-                        ),
-                      ),
-                    ),
-                  )
+                  const Expanded(
+                    child: Text("I accept the terms & conditions*"),
+                  ),
                 ],
               ),
 
               const SizedBox(height: 20),
 
-              // CREATE ACCOUNT BUTTON
+              // BUTTON
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  onPressed: acceptTerms
-                      ? () {
-                          // Firebase will be added later
-                        }
+                  onPressed: acceptTerms && !isLoading
+                      ? _createAccount
                       : null,
-                  child: const Text(
-                    "Create Account",
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 16),
-                  ),
+                  child: isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          "Create Account",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
                 ),
               ),
 
               const SizedBox(height: 25),
 
-              // SWITCH TO LOGIN
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text("Already have an account? "),
                   GestureDetector(
-                    onTap: () {
-                      Navigator.pushReplacementNamed(context, '/login');
-                    },
+                    onTap: () =>
+                        Navigator.pushReplacementNamed(context, "/login"),
                     child: Text(
                       "Sign in",
                       style: TextStyle(
@@ -209,13 +227,16 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     );
   }
 
-  // Reusable input style
-  InputDecoration inputStyle(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-      ),
-    );
-  }
+  // Simple UI helpers
+  Widget _label(String text) => Text(
+        text,
+        style: Theme.of(context).textTheme.labelLarge,
+      );
+
+  InputDecoration _input(String hint) => InputDecoration(
+        hintText: hint,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      );
 }

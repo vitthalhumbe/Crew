@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,6 +13,45 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController passwordController = TextEditingController();
 
   bool obscurePassword = true;
+  bool isLoading = false;
+  String? errorMessage;
+
+  Future<void> _login() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/mainShell');
+
+    } on FirebaseAuthException catch (e) {
+      String msg = "Login failed";
+
+      if (e.code == 'user-not-found') {
+        msg = "No user found with this email";
+      } else if (e.code == 'wrong-password') {
+        msg = "Incorrect password";
+      } else if (e.code == 'invalid-email') {
+        msg = "Invalid email format";
+      } else if (e.code == 'too-many-requests') {
+        msg = "Too many attempts. Try again later";
+      }
+
+      setState(() => errorMessage = msg);
+
+    } catch (e) {
+      setState(() => errorMessage = "Something went wrong, try again");
+    }
+
+    setState(() => isLoading = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,15 +63,14 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               const SizedBox(height: 40),
 
               // TITLE
               Text(
                 "Log In",
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
 
               const SizedBox(height: 30),
@@ -64,13 +103,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   suffixIcon: IconButton(
-                    icon: Icon(obscurePassword
-                        ? Icons.visibility_off
-                        : Icons.visibility),
+                    icon: Icon(
+                        obscurePassword ? Icons.visibility_off : Icons.visibility),
                     onPressed: () {
-                      setState(() {
-                        obscurePassword = !obscurePassword;
-                      });
+                      setState(() => obscurePassword = !obscurePassword);
                     },
                   ),
                 ),
@@ -82,19 +118,33 @@ class _LoginScreenState extends State<LoginScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: GestureDetector(
-                  onTap: () {
-                    Navigator.pushNamed(context, '/forgotPassword');
-                  },
+                  onTap: () => Navigator.pushNamed(context, '/forgotPassword'),
                   child: Text(
                     "forgot password?",
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                        color: Theme.of(context).colorScheme.primary),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 20),
+
+              // ERROR MESSAGE
+              if (errorMessage != null)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red),
+                  ),
+                  child: Text(
+                    errorMessage!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+
+              const SizedBox(height: 20),
 
               // LOGIN BUTTON
               SizedBox(
@@ -108,13 +158,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  onPressed: () {
-                    Navigator.pushReplacementNamed(context, '/mainShell');
-                  },
-                  child: const Text(
-                    "Log In",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
+                  onPressed: isLoading ? null : _login,
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          "Log In",
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
                 ),
               ),
 
@@ -136,7 +194,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                  )
+                  ),
                 ],
               ),
 

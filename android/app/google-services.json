@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "931423454032",
+    "project_id": "crewapplicationprogram",
+    "storage_bucket": "crewapplicationprogram.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:931423454032:android:f3943f7d43ae6676fae255",
+        "android_client_info": {
+          "package_name": "com.example.testing"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCoGnZlzBCdgbC-kFNrACIE2T3QOJsyVP8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

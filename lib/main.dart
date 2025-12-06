@@ -1,5 +1,6 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-// import 'package:firebase_core/firebase_core.dart';
+import 'package:testing/firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'ui/onboarding/splash_screen.dart';
 import 'ui/onboarding/onboarding_screen.dart';
@@ -8,10 +9,9 @@ import 'ui/auth/create_account_screen.dart';
 import 'ui/auth/forgot_password_screen.dart';
 import 'ui/navigation/main_shell.dart';
 
-void main() {
-  // WidgetsFlutterBinding.ensureInitialized();
-
-  // await Firebase.initializeApp();
+void main() async{
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const CrewApp());
 }
 
