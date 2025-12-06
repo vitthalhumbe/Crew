@@ -3,6 +3,12 @@ import 'package:testing/core/theme/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../profile/edit_profile_screen.dart';
+// ADD IMPORTS AT TOP
+import 'about_screen.dart';
+import 'privacy_policy_screen.dart';
+import 'notification_settings.dart';
+import 'edit_profile_screen.dart';
+
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -64,21 +70,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const _SectionHeader("ACCOUNT SETTINGS"),
 
           _SettingsTile(
-            title: "Edit profile",
-            icon: Icons.edit,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => EditProfileScreen(
-                    currentName: "",
-                    currentBio: "",
-                    currentAvatarUrl: "",
-                  ),
-                ),
-              );
-            },
-          ),
+  title: "Edit Profile",
+  icon: Icons.edit,
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => EditProfileScreen(
+        currentName: "", 
+        currentBio: "", 
+        currentAvatarUrl: "",
+      )),
+    );
+  },
+),
+
 
           const SizedBox(height: 20),
 
@@ -86,16 +91,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const _SectionHeader("GENERAL"),
 
           _SettingsTile(
-            title: "Notification Settings",
-            icon: Icons.notifications,
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Notification settings coming soon!"),
-                ),
-              );
-            },
-          ),
+  title: "Notification Settings",
+  icon: Icons.notifications,
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const NotificationSettingsScreen(),
+      ),
+    );
+  },
+),
+
 
           _SettingsTile(
   title: "Light Theme",
@@ -131,42 +138,30 @@ _SettingsTile(
           const _SectionHeader("SUPPORT"),
 
           _SettingsTile(
-            title: "Privacy Policy",
-            icon: Icons.privacy_tip,
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text("Privacy Policy"),
-                  content: const Text(
-                    "This is a placeholder privacy policy. "
-                    "You can replace this with your actual policy page.",
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text("Close"),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+  title: "Privacy Policy",
+  icon: Icons.privacy_tip,
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const PrivacyPolicyScreen(),
+      ),
+    );
+  },
+),
 
           _SettingsTile(
-            title: "About",
-            icon: Icons.info_outline,
-            onTap: () {
-              showAboutDialog(
-                context: context,
-                applicationName: "Crew App",
-                applicationVersion: "1.0.0",
-                children: const [
-                  Text("Developed by Vitthal Humbe."),
-                ],
-              );
-            },
-          ),
+  title: "About",
+  icon: Icons.info_outline,
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const AboutScreen(),
+      ),
+    );
+  },
+),
         ],
       ),
     );
