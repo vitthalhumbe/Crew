@@ -29,7 +29,7 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   lucide_icons: ^0.257.0
-  shared_preferences: ^2.0.15
+  shared_preferences: ^2.5.3
   flutter:
     sdk: flutter
 

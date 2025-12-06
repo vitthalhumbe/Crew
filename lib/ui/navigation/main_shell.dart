@@ -15,18 +15,22 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int currentIndex = 0;
 
-  final List<Widget> pages = const [
-    HomeScreen(),
-    CrewsScreen(),
-    CreateCrewScreen(),
-    JoinCrewScreen(),
-    ProfileScreen(),
-  ];
+  Widget _getPage(int index) {
+  switch (index) {
+    case 0: return const HomeScreen();
+    case 1: return const CrewsScreen();
+    case 2: return const CreateCrewScreen();
+    case 3: return const JoinCrewScreen();
+    case 4: return const ProfileScreen();  // rebuilt fresh every time
+    default: return const HomeScreen();
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: pages[currentIndex],
+      body: _getPage(currentIndex),
 
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: currentIndex,

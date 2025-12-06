@@ -1,9 +1,122 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'settings_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  String name = "";
+  String email = "";
+  String bio = "";
+  int streak = 0;
+  int crewsJoined = 0;
+  int tasksCompleted = 0;
+
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    loadLocalData();
+    fetchUserData();
+  }
+
+  // ------------------------------ LOCAL CACHE ------------------------------
+  Future<void> loadLocalData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      name = prefs.getString("user_name") ?? "";
+      email = prefs.getString("user_email") ?? "";
+      bio = prefs.getString("user_bio") ?? "";
+      streak = prefs.getInt("user_streak") ?? 0;
+      crewsJoined = prefs.getInt("user_crews") ?? 0;
+      tasksCompleted = prefs.getInt("user_tasks") ?? 0;
+    });
+  }
+
+  Future<void> saveLocalData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setString("user_name", name);
+    prefs.setString("user_email", email);
+    prefs.setString("user_bio", bio);
+    prefs.setInt("user_streak", streak);
+    prefs.setInt("user_crews", crewsJoined);
+    prefs.setInt("user_tasks", tasksCompleted);
+  }
+
+  // ------------------------------ FIRESTORE FETCH ------------------------------
+  Future<void> fetchUserData() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) {
+    setState(() => isLoading = false);
+    return;
+  }
+
+  final doc = await FirebaseFirestore.instance
+      .collection("users")
+      .doc(user.uid)
+      .get();
+
+  if (doc.exists) {
+    final data = doc.data()!;
+    setState(() {
+      name = data["name"] ?? "";
+      email = data["email"] ?? user.email ?? "";
+      bio = data["bio"] ?? "";
+      streak = data["streak"] ?? 0;
+      crewsJoined = data["crewsJoined"] ?? 0;
+      tasksCompleted = data["tasksCompleted"] ?? 0;
+      isLoading = false;
+    });
+
+    saveLocalData();
+  } else {
+    /// NEW IMPORTANT FIX — prevent infinite loading
+    setState(() {
+      name = user.displayName ?? "User";
+      email = user.email ?? "";
+      bio = "No bio added yet.";
+      streak = 0;
+      crewsJoined = 0;
+      tasksCompleted = 0;
+      isLoading = false;
+    });
+
+    /// Optionally create empty profile if missing
+    FirebaseFirestore.instance
+        .collection("users")
+        .doc(user.uid)
+        .set({
+      "name": name,
+      "email": email,
+      "bio": bio,
+      "streak": 0,
+      "crewsJoined": 0,
+      "tasksCompleted": 0,
+    }, SetOptions(merge: true));
+
+    saveLocalData();
+  }
+}
+
+
+  // ------------------------------ LOGOUT ------------------------------
+  Future<void> logout() async {
+    await FirebaseAuth.instance.signOut();
+    Navigator.pushNamedAndRemoveUntil(context, "/login", (route) => false);
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+  }
+
+  // ------------------------------ UI ------------------------------
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -11,195 +124,199 @@ class ProfileScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-
-              // ---------------- HEADER ----------------
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Profile",
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.notifications_none),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // ---------------- USER CARD ----------------
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Avatar
-                    CircleAvatar(
-                      radius: 35,
-                      backgroundColor:
-                          theme.colorScheme.primary.withOpacity(0.15),
-                      child: Icon(Icons.person,
-                          size: 38, color: theme.colorScheme.primary),
-                    ),
-                    const SizedBox(width: 16),
-
-                    // Name, email, bio
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Vitthal Humbe",
-                            style: theme.textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
+                    // ---------------- HEADER ----------------
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Profile",
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "vitthalhumbe@company.org",
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: theme.colorScheme.onSurface
-                                  .withOpacity(0.6),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            "Hello, I am creator of One Piece Theory Discussion crew...",
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: theme.colorScheme.onSurface
-                                  .withOpacity(0.7),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // ---------------- TWO STATS ----------------
-              Row(
-                children: [
-                  _StatCard(
-                    icon: Icons.local_fire_department,
-                    iconColor: Colors.blue,
-                    value: "12",
-                    label: "Days Streak",
-                  ),
-                  const SizedBox(width: 14),
-                  _StatCard(
-                    icon: Icons.group,
-                    iconColor: Colors.purple,
-                    value: "3",
-                    label: "Crew Joined",
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // ---------------- TASK COMPLETED ----------------
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Overall tasks completed",
-                              style: theme.textTheme.titleMedium),
-                          Text(
-                            "Keep up you fire!",
-                            style: TextStyle(
-                              color: theme.colorScheme.onSurface
-                                  .withOpacity(0.6),
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    CircleAvatar(
-                      radius: 22,
-                      backgroundColor:
-                          theme.colorScheme.primary.withOpacity(0.15),
-                      child: Text(
-                        "143",
-                        style: TextStyle(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
                         ),
+                        IconButton(
+                          onPressed: () {},
+                          icon: const Icon(Icons.notifications_none),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // ---------------- USER CARD ----------------
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                    )
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 35,
+                            backgroundColor: theme.colorScheme.primary
+                                .withOpacity(0.15),
+                            child: Icon(
+                              Icons.person,
+                              size: 38,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  name,
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  email,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.6),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  bio,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.7),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // ---------------- TWO STATS ----------------
+                    Row(
+                      children: [
+                        _StatCard(
+                          icon: Icons.local_fire_department,
+                          iconColor: Colors.blue,
+                          value: streak.toString(),
+                          label: "Days Streak",
+                        ),
+                        const SizedBox(width: 14),
+                        _StatCard(
+                          icon: Icons.group,
+                          iconColor: Colors.purple,
+                          value: crewsJoined.toString(),
+                          label: "Crew Joined",
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // ---------------- TASK COMPLETED ----------------
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Overall tasks completed",
+                                  style: theme.textTheme.titleMedium,
+                                ),
+                                Text(
+                                  "Keep up your fire!",
+                                  style: TextStyle(
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.6),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          CircleAvatar(
+                            radius: 22,
+                            backgroundColor: theme.colorScheme.primary
+                                .withOpacity(0.15),
+                            child: Text(
+                              tasksCompleted.toString(),
+                              style: TextStyle(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    Text(
+                      "SETTINGS",
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    _SettingsTile(
+                      icon: Icons.settings,
+                      title: "Settings",
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SettingsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    _SettingsTile(
+                      icon: Icons.logout,
+                      iconColor: Colors.red,
+                      title: "Logout",
+                      onTap: logout,
+                      isDestructive: true,
+                    ),
                   ],
                 ),
               ),
-
-              const SizedBox(height: 28),
-
-              Text(
-                "SETTINGS",
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color:
-                      theme.colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // Settings tile
-              _SettingsTile(
-                icon: Icons.settings,
-                title: "Settings",
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const SettingsScreen()),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 10),
-
-              // Logout
-              _SettingsTile(
-                icon: Icons.logout,
-                iconColor: Colors.red,
-                title: "Logout",
-                onTap: () {},
-                isDestructive: true,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
 }
 
+// --------------------------------------------------------------------------
+// CARD WIDGETS
 // --------------------------------------------------------------------------
 
 class _StatCard extends StatelessWidget {
@@ -284,10 +401,7 @@ class _SettingsTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(
-              icon,
-              color: iconColor ?? theme.colorScheme.onSurface,
-            ),
+            Icon(icon, color: iconColor ?? theme.colorScheme.onSurface),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
