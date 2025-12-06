@@ -6,26 +6,36 @@ import 'ui/onboarding/splash_screen.dart';
 import 'ui/onboarding/onboarding_screen.dart';
 import 'ui/auth/login_screen.dart';
 import 'ui/auth/create_account_screen.dart';
+import 'package:provider/provider.dart';
+import 'core/theme/theme_provider.dart';
+
 import 'ui/auth/forgot_password_screen.dart';
 import 'ui/navigation/main_shell.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const CrewApp());
+  runApp(
+  ChangeNotifierProvider(
+    create: (_) => ThemeProvider(),
+    child: const CrewApp(),
+  ),
+);
 }
-
 class CrewApp extends StatelessWidget {
   const CrewApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-
+      
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
+      themeMode: themeProvider.themeMode,   // 🔥 NOW IT WORKS
 
       initialRoute: '/',
       routes: {

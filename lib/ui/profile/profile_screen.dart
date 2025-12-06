@@ -252,7 +252,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 Text(
                                   bio,
                                   maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: theme.colorScheme.onSurface

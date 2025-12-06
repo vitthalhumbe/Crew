@@ -1,7 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:testing/core/theme/theme_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../profile/edit_profile_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool isDarkMode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    loadTheme();
+  }
+
+  // ------------------ LOAD THEME FROM STORAGE ------------------
+  Future<void> loadTheme() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      isDarkMode = prefs.getBool("app_theme_dark") ?? false;
+    });
+  }
+
+  // ------------------ SAVE THEME ------------------
+  Future<void> saveTheme(bool value) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool("app_theme_dark", value);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,45 +60,112 @@ class SettingsScreen extends StatelessWidget {
         children: [
           const SizedBox(height: 10),
 
-          _SectionHeader("ACCOUNT SETTINGS"),
+          // ACCOUNT SECTION
+          const _SectionHeader("ACCOUNT SETTINGS"),
 
           _SettingsTile(
             title: "Edit profile",
             icon: Icons.edit,
-            onTap: (){},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditProfileScreen(
+                    currentName: "",
+                    currentBio: "",
+                    currentAvatarUrl: "",
+                  ),
+                ),
+              );
+            },
           ),
 
           const SizedBox(height: 20),
 
-          _SectionHeader("GENERAL"),
+          // GENERAL SECTION
+          const _SectionHeader("GENERAL"),
 
           _SettingsTile(
             title: "Notification Settings",
             icon: Icons.notifications,
-            onTap: (){},
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Notification settings coming soon!"),
+                ),
+              );
+            },
           ),
 
-          _SwitchTile(
-            title: "App Theme",
-            icon: Icons.dark_mode,
-            value: false,
-            onChanged: (v){},
-          ),
+          _SettingsTile(
+  title: "Light Theme",
+  icon: Icons.light_mode,
+  onTap: () {
+    Provider.of<ThemeProvider>(context, listen: false)
+        .setTheme(ThemeMode.light);
+  },
+),
+
+_SettingsTile(
+  title: "Dark Theme",
+  icon: Icons.dark_mode,
+  onTap: () {
+    Provider.of<ThemeProvider>(context, listen: false)
+        .setTheme(ThemeMode.dark);
+  },
+),
+
+_SettingsTile(
+  title: "System Theme",
+  icon: Icons.phone_android,
+  onTap: () {
+    Provider.of<ThemeProvider>(context, listen: false)
+        .setTheme(ThemeMode.system);
+  },
+),
+
 
           const SizedBox(height: 20),
 
-          _SectionHeader("SUPPORT"),
+          // SUPPORT SECTION
+          const _SectionHeader("SUPPORT"),
 
           _SettingsTile(
             title: "Privacy Policy",
             icon: Icons.privacy_tip,
-            onTap: (){},
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("Privacy Policy"),
+                  content: const Text(
+                    "This is a placeholder privacy policy. "
+                    "You can replace this with your actual policy page.",
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Close"),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
 
           _SettingsTile(
             title: "About",
             icon: Icons.info_outline,
-            onTap: (){},
+            onTap: () {
+              showAboutDialog(
+                context: context,
+                applicationName: "Crew App",
+                applicationVersion: "1.0.0",
+                children: const [
+                  Text("Developed by Vitthal Humbe."),
+                ],
+              );
+            },
           ),
         ],
       ),
