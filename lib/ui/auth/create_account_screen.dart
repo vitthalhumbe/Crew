@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CreateAccountScreen extends StatefulWidget {
   const CreateAccountScreen({super.key});
@@ -11,54 +14,81 @@ class CreateAccountScreen extends StatefulWidget {
 
 class _CreateAccountScreenState extends State<CreateAccountScreen> {
   final TextEditingController nameController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
   final TextEditingController bioController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passController = TextEditingController();
+
+  File? avatarFile;
+  String avatarPath = "";
 
   bool obscurePassword = true;
   bool acceptTerms = false;
   bool isLoading = false;
 
-  Future<void> _createAccount() async {
+  Future<void> pickAvatar() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+
+    if (picked != null) {
+      setState(() {
+        avatarFile = File(picked.path);
+        avatarPath = picked.path; // Local path (NO FIREBASE STORAGE)
+      });
+    }
+  }
+  Future<void> createAccount() async {
     if (!acceptTerms) return;
+
+    String name = nameController.text.trim();
+    String bio = bioController.text.trim();
+    String email = emailController.text.trim();
+    String pass = passController.text.trim();
+
+    if (name.isEmpty || email.isEmpty || pass.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Name, Email, Password required")),
+      );
+      return;
+    }
 
     setState(() => isLoading = true);
 
     try {
-      // 1️⃣ CREATE USER (Firebase Auth)
-      UserCredential userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-      );
+      UserCredential cred = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: pass);
 
-      User? user = userCredential.user;
+      User? user = cred.user;
+      if (user == null) throw Exception("User not created");
 
-      if (user == null) throw Exception("User creation failed");
-
-      // 2️⃣ SAVE USER DATA TO FIRESTORE
       await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
         "uid": user.uid,
-        "name": nameController.text.trim(),
-        "email": emailController.text.trim(),
-        "bio": bioController.text.trim(),
+        "name": name,
+        "email": email,
+        "bio": bio.isEmpty ? "No bio added yet." : bio,
+        "avatarUrl": avatarPath, // LOCAL ONLY
+        "streak": 0,
+        "crewsJoined": 0,
+        "tasksCompleted": 0,
         "createdAt": DateTime.now(),
       });
 
-      // 3️⃣ MOVE TO MAIN APP
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.setString("user_name", name);
+      prefs.setString("user_email", email);
+      prefs.setString("user_bio", bio);
+      prefs.setString("user_avatar", avatarPath);
+      prefs.setInt("user_streak", 0);
+      prefs.setInt("user_crews", 0);
+      prefs.setInt("user_tasks", 0);
+
       Navigator.pushReplacementNamed(context, "/mainShell");
     } on FirebaseAuthException catch (e) {
       String msg = "Signup failed";
 
-      if (e.code == "email-already-in-use") {
-        msg = "This email is already registered.";
-      } else if (e.code == "weak-password") {
-        msg = "Choose a stronger password.";
-      }
+      if (e.code == "email-already-in-use") msg = "Email already registered!";
+      if (e.code == "weak-password") msg = "Choose a stronger password.";
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg)),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Unexpected error occurred.")),
@@ -70,8 +100,10 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -82,39 +114,44 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
               Text(
                 "Create Account",
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
 
               const SizedBox(height: 25),
 
               Center(
-                child: Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 55,
-                      backgroundColor: Colors.grey.shade300,
-                      child: const Icon(Icons.person, size: 60),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: CircleAvatar(
-                        radius: 18,
-                        backgroundColor:
-                            Theme.of(context).colorScheme.primary,
-                        child: const Icon(Icons.camera_alt,
-                            size: 18, color: Colors.white),
+                child: GestureDetector(
+                  onTap: pickAvatar,
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 55,
+                        backgroundColor: Colors.grey.shade300,
+                        backgroundImage:
+                            avatarFile != null ? FileImage(avatarFile!) : null,
+                        child: avatarFile == null
+                            ? const Icon(Icons.person, size: 60)
+                            : null,
                       ),
-                    )
-                  ],
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: theme.colorScheme.primary,
+                          child: const Icon(Icons.camera_alt,
+                              size: 18, color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
               const SizedBox(height: 30),
 
-              // NAME
               _label("Name"),
               TextField(
                 controller: nameController,
@@ -123,7 +160,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
               const SizedBox(height: 20),
 
-              // EMAIL
               _label("Email"),
               TextField(
                 controller: emailController,
@@ -133,18 +169,15 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
               const SizedBox(height: 20),
 
-              // PASSWORD
               _label("Password"),
               TextField(
-                controller: passwordController,
+                controller: passController,
                 obscureText: obscurePassword,
                 decoration: _input("Enter your password").copyWith(
                   suffixIcon: IconButton(
-                    icon: Icon(
-                      obscurePassword
-                          ? Icons.visibility_off
-                          : Icons.visibility,
-                    ),
+                    icon: Icon(obscurePassword
+                        ? Icons.visibility_off
+                        : Icons.visibility),
                     onPressed: () =>
                         setState(() => obscurePassword = !obscurePassword),
                   ),
@@ -153,7 +186,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
               const SizedBox(height: 20),
 
-              // BIO
               _label("Bio"),
               TextField(
                 controller: bioController,
@@ -163,13 +195,12 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
               const SizedBox(height: 20),
 
-              // TERMS CHECKBOX
+              // TERMS CHECK
               Row(
                 children: [
                   Checkbox(
                     value: acceptTerms,
-                    onChanged: (value) =>
-                        setState(() => acceptTerms = value!),
+                    onChanged: (v) => setState(() => acceptTerms = v!),
                   ),
                   const Expanded(
                     child: Text("I accept the terms & conditions*"),
@@ -179,28 +210,26 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
               const SizedBox(height: 20),
 
-              // BUTTON
+              // CREATE BUTTON
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: acceptTerms && !isLoading
-                      ? _createAccount
-                      : null,
+                  onPressed:
+                      acceptTerms && !isLoading ? createAccount : null,
                   child: isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
                           "Create Account",
                           style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
+                              fontWeight: FontWeight.w600, fontSize: 16),
                         ),
                 ),
               ),
 
               const SizedBox(height: 25),
 
+              // LOGIN LINK
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -211,11 +240,11 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     child: Text(
                       "Sign in",
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
+                        color: theme.colorScheme.primary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  )
+                  ),
                 ],
               ),
 
@@ -227,7 +256,9 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     );
   }
 
-  // Simple UI helpers
+  // -------------------------------------------------------------------
+  // UI HELPERS
+  // -------------------------------------------------------------------
   Widget _label(String text) => Text(
         text,
         style: Theme.of(context).textTheme.labelLarge,

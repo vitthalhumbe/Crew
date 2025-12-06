@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -57,35 +58,49 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   // -------------------------------------------------------------------
   // ✔ SAVE PROFILE DATA
   // -------------------------------------------------------------------
-  Future<void> saveProfile() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+Future<void> saveProfile() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
 
-    String name = nameController.text.trim();
-    String bio = bioController.text.trim();
+  String name = nameController.text.trim();
+  String bio = bioController.text.trim();
 
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Name cannot be empty!")),
-      );
-      return;
-    }
-
-    /// UPDATE FIRESTORE
-    await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
-      "name": name,
-      "bio": bio,
-      "avatarUrl": avatarUrl, // we save the local path for now
-    }, SetOptions(merge: true));
-
-    /// UPDATE LOCAL STORAGE
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setString("user_name", name);
-    prefs.setString("user_bio", bio);
-    prefs.setString("user_avatar", avatarUrl);
-
-    Navigator.pop(context, true); // return success
+  if (name.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Name cannot be empty!")),
+    );
+    return;
   }
+
+  // --------------------------
+  // 🚫 NO Firebase Storage
+  // 🚫 NO uploading
+  // ✔ Avatar saved locally ONLY
+  // --------------------------
+
+  String? localAvatarPath = avatarUrl; // This is a device path
+
+  // -------------------------
+  // UPDATE FIRESTORE (no avatar)
+  // -------------------------
+  await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
+    "name": name,
+    "bio": bio,
+  }, SetOptions(merge: true));
+
+  // -------------------------
+  // UPDATE LOCAL STORAGE
+  // -------------------------
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  prefs.setString("user_name", name);
+  prefs.setString("user_bio", bio);
+
+  // Save avatar path locally (ONLY local)
+  prefs.setString("user_avatar", localAvatarPath ?? "");
+
+  Navigator.pop(context, true);
+}
+
 
   // -------------------------------------------------------------------
   @override

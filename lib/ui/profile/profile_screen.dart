@@ -58,58 +58,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // ------------------------------ FIRESTORE FETCH ------------------------------
-  Future<void> fetchUserData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      setState(() => isLoading = false);
-      return;
-    }
-
-    final doc = await FirebaseFirestore.instance
-        .collection("users")
-        .doc(user.uid)
-        .get();
-
-    if (doc.exists) {
-      final data = doc.data()!;
-      setState(() {
-        name = data["name"] ?? "";
-        email = data["email"] ?? user.email ?? "";
-        bio = data["bio"] ?? "";
-        streak = data["streak"] ?? 0;
-        avatarUrl = data["avatarUrl"] ?? "";
-        crewsJoined = data["crewsJoined"] ?? 0;
-        tasksCompleted = data["tasksCompleted"] ?? 0;
-        isLoading = false;
-      });
-
-      saveLocalData();
-    } else {
-      /// NEW IMPORTANT FIX — prevent infinite loading
-      setState(() {
-        name = user.displayName ?? "User";
-        email = user.email ?? "";
-        bio = "No bio added yet.";
-        streak = 0;
-        crewsJoined = 0;
-        tasksCompleted = 0;
-        isLoading = false;
-      });
-
-      /// Optionally create empty profile if missing
-      FirebaseFirestore.instance.collection("users").doc(user.uid).set({
-        "name": name,
-        "email": email,
-        "bio": bio,
-        "streak": 0,
-        "crewsJoined": 0,
-        "avatarUrl": avatarUrl,
-        "tasksCompleted": 0,
-      }, SetOptions(merge: true));
-
-      saveLocalData();
-    }
+ Future<void> fetchUserData() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) {
+    setState(() => isLoading = false);
+    return;
   }
+
+  final doc = await FirebaseFirestore.instance
+      .collection("users")
+      .doc(user.uid)
+      .get();
+
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+
+  if (doc.exists) {
+    final data = doc.data()!;
+
+    setState(() {
+      name = data["name"] ?? "";
+      email = user.email ?? "";
+      bio = data["bio"] ?? "";
+
+      // Avatar always loaded from LOCAL ONLY
+      avatarUrl = prefs.getString("user_avatar") ?? "";
+
+      streak = data["user_streak"] ?? 0;
+      crewsJoined = data["user_crews"] ?? 0;
+      tasksCompleted = data["user_tasks"] ?? 0;
+
+      isLoading = false;
+    });
+  } else {
+    // First time user
+    setState(() {
+      name = user.displayName ?? "User";
+      email = user.email ?? "";
+      bio = "No bio added yet.";
+      avatarUrl = prefs.getString("user_avatar") ?? "";
+      streak = 0;
+      crewsJoined = 0;
+      tasksCompleted = 0;
+      isLoading = false;
+    });
+
+    FirebaseFirestore.instance.collection("users").doc(user.uid).set({
+      "name": name,
+      "email": email,
+      "bio": bio,
+    }, SetOptions(merge: true));
+  }
+
+  saveLocalData();
+}
 
   void confirmLogout() {
     showDialog(
