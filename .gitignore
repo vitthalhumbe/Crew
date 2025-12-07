@@ -166,3 +166,5 @@ app.*.symbols
 
 
 README.md
+
+lib/firebase_options.dart
