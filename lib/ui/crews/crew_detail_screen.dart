@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'crew_overview_tab.dart';
 import 'crew_members_tab.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'crew_leaderboard_tab.dart';
 
 class CrewDetailScreen extends StatefulWidget {
@@ -42,7 +43,10 @@ class _CrewDetailScreenState extends State<CrewDetailScreen>
         final crewName = data["name"] ?? "";
         final notice = data["notice"] ?? "";
         final isPrivate = data["isPrivate"] ?? false;
-        final captainId = data["captainId"] ?? "";
+        final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+        final captainId = data["createdBy"] ?? "";
+
+
 
         return Scaffold(
           backgroundColor: theme.scaffoldBackgroundColor,
@@ -51,8 +55,10 @@ class _CrewDetailScreenState extends State<CrewDetailScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
                   child: Row(
                     children: [
                       IconButton(
@@ -85,37 +91,51 @@ class _CrewDetailScreenState extends State<CrewDetailScreen>
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.blue.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.public, size: 16, color: Colors.blue),
+                            const Icon(
+                              Icons.public,
+                              size: 16,
+                              color: Colors.blue,
+                            ),
                             const SizedBox(width: 4),
-                            Text(isPrivate ? "Private" : "Public",
-                                style: const TextStyle(color: Colors.blue)),
+                            Text(
+                              isPrivate ? "Private" : "Public",
+                              style: const TextStyle(color: Colors.blue),
+                            ),
                           ],
                         ),
                       ),
                       const SizedBox(width: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.purple.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(10),
+
+                      if (currentUserId == captainId) 
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.purple.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            children: const [
+                              Icon(Icons.star, size: 16, color: Colors.purple),
+                              SizedBox(width: 4),
+                              Text(
+                                "Captain",
+                                style: TextStyle(color: Colors.purple),
+                              ),
+                            ],
+                          ),
                         ),
-                        child: Row(
-                          children: const [
-                            Icon(Icons.star, size: 16, color: Colors.purple),
-                            SizedBox(width: 4),
-                            Text("Captain",
-                                style: TextStyle(color: Colors.purple)),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -136,8 +156,9 @@ class _CrewDetailScreenState extends State<CrewDetailScreen>
                   controller: tabController,
                   indicatorColor: theme.colorScheme.primary,
                   labelColor: theme.colorScheme.primary,
-                  unselectedLabelColor:
-                      theme.colorScheme.onSurface.withOpacity(0.6),
+                  unselectedLabelColor: theme.colorScheme.onSurface.withOpacity(
+                    0.6,
+                  ),
                   tabs: const [
                     Tab(text: "Overview"),
                     Tab(text: "Members"),
@@ -149,7 +170,10 @@ class _CrewDetailScreenState extends State<CrewDetailScreen>
                     controller: tabController,
                     children: [
                       CrewOverviewTab(crewId: widget.crewId),
-                      CrewMembersTab(crewId: widget.crewId, captainId: captainId),
+                      CrewMembersTab(
+                        crewId: widget.crewId,
+                        captainId: captainId,
+                      ),
                       CrewLeaderboardTab(crewId: widget.crewId),
                     ],
                   ),
