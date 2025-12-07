@@ -150,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         final data = snapshot.data!.data() as Map<String, dynamic>;
         final title = data["name"] ?? "Unnamed Crew";
-        final caption = data["description"] ?? "No updates yet";
+        final caption = data["notice"] ?? "No updates yet";
         final progress = 0.0; // later when tasks exist
 
         return GestureDetector(
