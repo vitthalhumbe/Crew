@@ -3,11 +3,8 @@ import 'package:testing/core/theme/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../profile/edit_profile_screen.dart';
-// ADD IMPORTS AT TOP
 import 'about_screen.dart';
 import 'privacy_policy_screen.dart';
-import 'notification_settings.dart';
-
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -25,7 +22,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     loadTheme();
   }
 
-  // ------------------ LOAD THEME FROM STORAGE ------------------
   Future<void> loadTheme() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -33,7 +29,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  // ------------------ SAVE THEME ------------------
   Future<void> saveTheme(bool value) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool("app_theme_dark", value);
@@ -69,19 +64,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const _SectionHeader("ACCOUNT SETTINGS"),
 
           _SettingsTile(
-  title: "Edit Profile",
-  icon: Icons.edit,
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => EditProfileScreen(
-        currentName: "", 
-        currentBio: "",
-      )),
-    );
-  },
-),
-
+            title: "Edit Profile",
+            icon: Icons.edit,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      EditProfileScreen(currentName: "", currentBio: ""),
+                ),
+              );
+            },
+          ),
 
           const SizedBox(height: 20),
 
@@ -89,46 +83,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const _SectionHeader("GENERAL"),
 
           _SettingsTile(
-  title: "Notification Settings",
-  icon: Icons.notifications,
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const NotificationSettingsScreen(),
-      ),
-    );
-  },
-),
-
+            title: "Light Theme",
+            icon: Icons.light_mode,
+            onTap: () {
+              Provider.of<ThemeProvider>(
+                context,
+                listen: false,
+              ).setTheme(ThemeMode.light);
+            },
+          ),
 
           _SettingsTile(
-  title: "Light Theme",
-  icon: Icons.light_mode,
-  onTap: () {
-    Provider.of<ThemeProvider>(context, listen: false)
-        .setTheme(ThemeMode.light);
-  },
-),
+            title: "Dark Theme",
+            icon: Icons.dark_mode,
+            onTap: () {
+              Provider.of<ThemeProvider>(
+                context,
+                listen: false,
+              ).setTheme(ThemeMode.dark);
+            },
+          ),
 
-_SettingsTile(
-  title: "Dark Theme",
-  icon: Icons.dark_mode,
-  onTap: () {
-    Provider.of<ThemeProvider>(context, listen: false)
-        .setTheme(ThemeMode.dark);
-  },
-),
-
-_SettingsTile(
-  title: "System Theme",
-  icon: Icons.phone_android,
-  onTap: () {
-    Provider.of<ThemeProvider>(context, listen: false)
-        .setTheme(ThemeMode.system);
-  },
-),
-
+          _SettingsTile(
+            title: "System Theme",
+            icon: Icons.phone_android,
+            onTap: () {
+              Provider.of<ThemeProvider>(
+                context,
+                listen: false,
+              ).setTheme(ThemeMode.system);
+            },
+          ),
 
           const SizedBox(height: 20),
 
@@ -136,37 +121,31 @@ _SettingsTile(
           const _SectionHeader("SUPPORT"),
 
           _SettingsTile(
-  title: "Privacy Policy",
-  icon: Icons.privacy_tip,
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const PrivacyPolicyScreen(),
-      ),
-    );
-  },
-),
+            title: "Privacy Policy",
+            icon: Icons.privacy_tip,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+              );
+            },
+          ),
 
           _SettingsTile(
-  title: "About",
-  icon: Icons.info_outline,
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const AboutScreen(),
-      ),
-    );
-  },
-),
+            title: "About",
+            icon: Icons.info_outline,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AboutScreen()),
+              );
+            },
+          ),
         ],
       ),
     );
   }
 }
-
-// ---------------- WIDGETS -------------------
 
 class _SectionHeader extends StatelessWidget {
   final String text;
@@ -177,11 +156,8 @@ class _SectionHeader extends StatelessWidget {
     return Text(
       text,
       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: Theme.of(context)
-                .colorScheme
-                .onSurface
-                .withOpacity(0.6),
-          ),
+        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+      ),
     );
   }
 }
@@ -213,59 +189,10 @@ class _SettingsTile extends StatelessWidget {
           children: [
             Icon(icon, color: theme.colorScheme.onSurface),
             const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: theme.textTheme.titleMedium,
-              ),
-            ),
+            Expanded(child: Text(title, style: theme.textTheme.titleMedium)),
             const Icon(Icons.chevron_right),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _SwitchTile extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  const _SwitchTile({
-    required this.title,
-    required this.icon,
-    required this.value,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: theme.colorScheme.onSurface),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              title,
-              style: theme.textTheme.titleMedium,
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-          ),
-        ],
       ),
     );
   }

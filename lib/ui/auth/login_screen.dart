@@ -64,8 +64,6 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 40),
-
-              // TITLE
               Text(
                 "Log In",
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -75,7 +73,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 30),
 
-              // EMAIL FIELD
               Text("Email", style: Theme.of(context).textTheme.labelLarge),
               const SizedBox(height: 6),
               TextField(
@@ -91,7 +88,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 20),
 
-              // PASSWORD FIELD
               Text("Password", style: Theme.of(context).textTheme.labelLarge),
               const SizedBox(height: 6),
               TextField(
@@ -114,7 +110,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 10),
 
-              // FORGOT PASSWORD
               Align(
                 alignment: Alignment.centerRight,
                 child: GestureDetector(
@@ -129,7 +124,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 20),
 
-              // ERROR MESSAGE
               if (errorMessage != null)
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -146,7 +140,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 20),
 
-              // LOGIN BUTTON
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -178,7 +171,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const Spacer(),
 
-              // CREATE ACCOUNT
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

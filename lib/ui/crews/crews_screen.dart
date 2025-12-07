@@ -68,16 +68,11 @@ class _CrewsScreenState extends State<CrewsScreen> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          IconButton(
-                            onPressed: () {},
-                            icon: const Icon(Icons.notifications_none),
-                          ),
                         ],
                       ),
 
                       const SizedBox(height: 20),
 
-                      // CREW LIST BUILDER
                       ...userCrewIds.map((id) => _buildCrewStreamCard(id)),
                     ],
                   ),
@@ -85,7 +80,6 @@ class _CrewsScreenState extends State<CrewsScreen> {
     );
   }
 
-  // Fetch each crew live
  Widget _buildCrewStreamCard(String crewId) {
   final uid = FirebaseAuth.instance.currentUser!.uid;
   final progressService = ProgressService();
@@ -103,9 +97,6 @@ class _CrewsScreenState extends State<CrewsScreen> {
       final data = snapshot.data!.data() as Map<String, dynamic>;
       final title = data["name"] ?? "Unnamed Crew";
 
-      // ------------------------------
-      // FETCH USER'S REAL PROGRESS
-      // ------------------------------
       return FutureBuilder<double>(
         future: progressService.getUserProgressInCrew(crewId, uid),
         builder: (context, progressSnap) {
@@ -132,7 +123,6 @@ class _CrewsScreenState extends State<CrewsScreen> {
   );
 }
 
-  // UI card widget
   Widget _crewCard(
     BuildContext context, {
     required String title,

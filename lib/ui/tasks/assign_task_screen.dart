@@ -30,8 +30,6 @@ class _AssignTaskScreenState extends State<AssignTaskScreen> {
 
   Future<void> assignTask() async {
     final title = titleController.text.trim();
-    final description = descriptionController.text.trim();
-    final link = linkController.text.trim();
 
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -40,14 +38,6 @@ class _AssignTaskScreenState extends State<AssignTaskScreen> {
       return;
     }
 
-    final taskData = {
-      "title": title,
-      "description": description,
-      "link": link,
-      "concepts": concepts,
-      "completedBy": [],
-      "assignedAt": FieldValue.serverTimestamp(),
-    };
 
     await FirebaseFirestore.instance
         .collection("crews")
@@ -58,10 +48,8 @@ class _AssignTaskScreenState extends State<AssignTaskScreen> {
           "description": descriptionController.text.trim(),
           "concepts": concepts,
           "link": linkController.text.trim(),
-
-          // REQUIRED FIELDS
-          "completedBy": [], // list of userIds
-          "createdAt": Timestamp.now(), // sorting
+          "completedBy": [], 
+          "createdAt": Timestamp.now(),
         });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -78,7 +66,6 @@ class _AssignTaskScreenState extends State<AssignTaskScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
 
-      // -------------------- FIXED BOTTOM BUTTON --------------------
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16),
         child: SizedBox(
@@ -112,7 +99,6 @@ class _AssignTaskScreenState extends State<AssignTaskScreen> {
 
               const SizedBox(height: 20),
 
-              // -------------------- TASK TITLE --------------------
               TextField(
                 controller: titleController,
                 decoration: InputDecoration(
@@ -126,7 +112,6 @@ class _AssignTaskScreenState extends State<AssignTaskScreen> {
 
               const SizedBox(height: 16),
 
-              // -------------------- DESCRIPTION --------------------
               TextField(
                 controller: descriptionController,
                 maxLines: 3,
@@ -141,7 +126,6 @@ class _AssignTaskScreenState extends State<AssignTaskScreen> {
 
               const SizedBox(height: 16),
 
-              // -------------------- LINK --------------------
               TextField(
                 controller: linkController,
                 decoration: InputDecoration(
@@ -156,7 +140,6 @@ class _AssignTaskScreenState extends State<AssignTaskScreen> {
 
               const SizedBox(height: 16),
 
-              // -------------------- CONCEPTS --------------------
               Text("Concepts to know", style: theme.textTheme.titleMedium),
 
               const SizedBox(height: 10),

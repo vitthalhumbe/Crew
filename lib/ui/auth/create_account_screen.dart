@@ -1,6 +1,4 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,11 +16,9 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passController = TextEditingController();
 
-
   bool obscurePassword = true;
   bool acceptTerms = false;
   bool isLoading = false;
-
 
   Future<void> createAccount() async {
     if (!acceptTerms) return;
@@ -130,9 +126,9 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                 obscureText: obscurePassword,
                 decoration: _input("Enter your password").copyWith(
                   suffixIcon: IconButton(
-                    icon: Icon(obscurePassword
-                        ? Icons.visibility_off
-                        : Icons.visibility),
+                    icon: Icon(
+                      obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    ),
                     onPressed: () =>
                         setState(() => obscurePassword = !obscurePassword),
                   ),
@@ -150,7 +146,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
               const SizedBox(height: 20),
 
-              // TERMS CHECK
               Row(
                 children: [
                   Checkbox(
@@ -165,26 +160,25 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
               const SizedBox(height: 20),
 
-              // CREATE BUTTON
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed:
-                      acceptTerms && !isLoading ? createAccount : null,
+                  onPressed: acceptTerms && !isLoading ? createAccount : null,
                   child: isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
                           "Create Account",
                           style: TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 16),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
                         ),
                 ),
               ),
 
               const SizedBox(height: 25),
 
-              // LOGIN LINK
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -211,18 +205,12 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     );
   }
 
-  // -------------------------------------------------------------------
-  // UI HELPERS
-  // -------------------------------------------------------------------
-  Widget _label(String text) => Text(
-        text,
-        style: Theme.of(context).textTheme.labelLarge,
-      );
+
+  Widget _label(String text) =>
+      Text(text, style: Theme.of(context).textTheme.labelLarge);
 
   InputDecoration _input(String hint) => InputDecoration(
-        hintText: hint,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      );
+    hintText: hint,
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+  );
 }

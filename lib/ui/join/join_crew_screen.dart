@@ -19,82 +19,79 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
       .where("isPrivate", isEqualTo: false)
       .snapshots();
 
-  // =============================================================
-  // JOIN PUBLIC CREW
-  // =============================================================
   Future<void> joinPublicCrew(DocumentSnapshot crew) async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Please log in to join a crew.")),
-    );
-    return;
-  }
-
-  try {
-    List<dynamic> members = (crew.data() as Map<String, dynamic>)['members'] ?? [];
-    if (members.contains(user.uid)) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("You're already a member of ${crew["name"]}!")),
+        const SnackBar(content: Text("Please log in to join a crew.")),
       );
       return;
     }
 
-    final userRef = FirebaseFirestore.instance.collection("users").doc(user.uid);
-    final userDoc = await userRef.get();
-    List<dynamic> userCrews = userDoc.data()?["crews"] ?? [];
+    try {
+      List<dynamic> members =
+          (crew.data() as Map<String, dynamic>)['members'] ?? [];
+      if (members.contains(user.uid)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("You're already a member of ${crew["name"]}!"),
+          ),
+        );
+        return;
+      }
 
-    if (userCrews.contains(crew.id)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Already joined this crew!")),
+      final userRef = FirebaseFirestore.instance
+          .collection("users")
+          .doc(user.uid);
+      final userDoc = await userRef.get();
+      List<dynamic> userCrews = userDoc.data()?["crews"] ?? [];
+
+      if (userCrews.contains(crew.id)) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Already joined this crew!")));
+        return;
+      }
+
+      await crew.reference.update({
+        "members": FieldValue.arrayUnion([user.uid]),
+      });
+
+      await userRef.set({
+        "crewsJoined": FieldValue.increment(1),
+        "crews": FieldValue.arrayUnion([crew.id]),
+      }, SetOptions(merge: true));
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Joined ${crew["name"]}!")));
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => CrewDetailScreen(crewId: crew.id)),
       );
-      return;
+    } on FirebaseException catch (e) {
+      // FirebaseException contains .code, useful for inspection
+      debugPrint("Join crew failed: ${e.code} ${e.message}");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Failed to join crew: ${e.code}")));
+    } catch (e) {
+      debugPrint("Join crew unexpected error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Unexpected error occurred.")),
+      );
     }
-
-    // do transforms (arrayUnion)
-    await crew.reference.update({
-      "members": FieldValue.arrayUnion([user.uid])
-    });
-
-    await userRef.set({
-      "crewsJoined": FieldValue.increment(1),
-      "crews": FieldValue.arrayUnion([crew.id])
-    }, SetOptions(merge: true));
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Joined ${crew["name"]}!")),
-    );
-
-    // navigate to crew details (optional)
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => CrewDetailScreen(crewId: crew.id)),
-    );
-  } on FirebaseException catch (e) {
-    // FirebaseException contains .code, useful for inspection
-    debugPrint("Join crew failed: ${e.code} ${e.message}");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Failed to join crew: ${e.code}")),
-    );
-  } catch (e) {
-    debugPrint("Join crew unexpected error: $e");
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Unexpected error occurred.")),
-    );
   }
-}
 
-  // =============================================================
-  // JOIN PRIVATE CREW
-  // =============================================================
   Future<void> joinPrivateCrew() async {
     String code = joinCodeController.text.trim();
     final user = FirebaseAuth.instance.currentUser;
 
     if (code.isEmpty || user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Enter a valid code")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Enter a valid code")));
       return;
     }
 
@@ -105,9 +102,9 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
         .get();
 
     if (query.docs.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid code!")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Invalid code!")));
       return;
     }
 
@@ -124,20 +121,18 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
 
     // Add user to crew
     await crew.reference.update({
-      "members": FieldValue.arrayUnion([user.uid])
+      "members": FieldValue.arrayUnion([user.uid]),
     });
 
     // Add crew to user
     FirebaseFirestore.instance.collection("users").doc(user.uid).set({
       "crewsJoined": FieldValue.increment(1),
-      "crews": FieldValue.arrayUnion([crew.id])
+      "crews": FieldValue.arrayUnion([crew.id]),
     }, SetOptions(merge: true));
-  Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => CrewDetailScreen(crewId: crew.id),
-  ),
-);
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => CrewDetailScreen(crewId: crew.id)),
+    );
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Joined ${crew["name"]} successfully!")),
@@ -146,9 +141,6 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
     Navigator.pop(context);
   }
 
-  // =============================================================
-  // UI
-  // =============================================================
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -159,7 +151,6 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // -------------------- HEADER --------------------
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               child: Row(
@@ -171,15 +162,10 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.notifications_none),
-                  ),
                 ],
               ),
             ),
 
-            // -------------------- TABS --------------------
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
@@ -199,21 +185,17 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
 
             const SizedBox(height: 10),
 
-            // -------------------- CONTENT --------------------
             Expanded(
               child: selectedTab == 0
                   ? _buildPublicCrewsList(theme)
                   : _buildPrivateCrewView(theme),
-            )
+            ),
           ],
         ),
       ),
     );
   }
 
-  // =============================================================
-  // TAB BUTTON
-  // =============================================================
   Widget _buildTab(String text, int index) {
     final theme = Theme.of(context);
     final isSelected = selectedTab == index;
@@ -247,9 +229,6 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
     );
   }
 
-  // =============================================================
-  // PUBLIC CREWS LIST
-  // =============================================================
   Widget _buildPublicCrewsList(ThemeData theme) {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -315,7 +294,9 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
                   alreadyJoined
                       ? Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.green.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(10),
@@ -332,9 +313,13 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
                           onTap: () => joinPublicCrew(crew),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.primary.withOpacity(0.12),
+                              color: theme.colorScheme.primary.withOpacity(
+                                0.12,
+                              ),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
@@ -355,9 +340,6 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
     );
   }
 
-  // =============================================================
-  // PRIVATE JOIN UI
-  // =============================================================
   Widget _buildPrivateCrewView(ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -393,10 +375,7 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
               onPressed: joinPrivateCrew,
               child: const Text(
                 "Join Crew",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ),
           ),

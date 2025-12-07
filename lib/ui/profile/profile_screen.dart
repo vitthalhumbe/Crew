@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -31,9 +30,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     fetchUserData();
   }
 
-  // ---------------------------------------------------------------
-  // LOCAL CACHE
-  // ---------------------------------------------------------------
   Future<void> loadLocalData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
@@ -57,9 +53,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     prefs.setInt("user_tasks", tasksCompleted);
   }
 
-  // ---------------------------------------------------------------
-  // FIRESTORE FETCH
-  // ---------------------------------------------------------------
  Future<void> fetchUserData() async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) return;
@@ -117,9 +110,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Navigator.pushNamedAndRemoveUntil(context, "/login", (_) => false);
   }
 
-  // ---------------------------------------------------------------
-  // UI
-  // ---------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -146,10 +136,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Row(
                           children: [
                             IconButton(
-                              onPressed: () {},
-                              icon: const Icon(Icons.notifications_none),
-                            ),
-                            IconButton(
                               icon: const Icon(Icons.edit),
                               onPressed: () async {
                                 final result = await Navigator.push(
@@ -172,9 +158,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     const SizedBox(height: 20),
 
-                    //--------------------------------------------------------------------
-                    // USER CARD
-                    //--------------------------------------------------------------------
                     Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
@@ -379,7 +362,6 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// ==========================================================================
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final Color? iconColor;

@@ -50,11 +50,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // --- FIXED ---
   Future<void> _finishOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
-
-    // Correct key (matches SplashScreen)
     await prefs.setBool('seenOnboarding', true);
-
-
     Navigator.pushReplacementNamed(context, '/login');
   }
 
@@ -79,7 +75,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             },
           ),
 
-          // SKIP button (hide on last page)
           if (_pageIndex != onboarding_data.length - 1)
             Positioned(
               top: 50,
@@ -93,7 +88,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-          // BOTTOM CONTROLS
           Positioned(
             bottom: 40,
             left: 0,
@@ -121,12 +115,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
                 const SizedBox(height: 20),
 
-                // NEXT / GET STARTED BUTTON
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 50, vertical: 12),
+                      horizontal: 50,
+                      vertical: 12,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),

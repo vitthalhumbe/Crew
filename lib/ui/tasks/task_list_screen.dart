@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import 'assign_task_screen.dart';
 import 'task_detail_screen.dart';
 
@@ -137,9 +136,6 @@ class _TaskListScreenState extends State<TaskListScreen>
   }
 }
 
-// =========================================================================
-// TASK LIST VIEW — Reusable widget for All / Pending / Completed
-// =========================================================================
 class _TaskListView extends StatelessWidget {
   final String crewId;
   final String filter; // all / pending / completed
@@ -189,8 +185,6 @@ class _TaskListView extends StatelessWidget {
           itemBuilder: (context, i) {
             final task = filteredTasks[i];
             final title = task["title"] ?? "";
-            final completedBy = List<String>.from(task["completedBy"]);
-            final isDone = completedBy.contains(uid);
 
             return GestureDetector(
               onTap: () {

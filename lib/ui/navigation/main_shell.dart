@@ -21,7 +21,7 @@ class _MainShellState extends State<MainShell> {
     case 1: return const CrewsScreen();
     case 2: return const CreateCrewScreen();
     case 3: return const JoinCrewScreen();
-    case 4: return const ProfileScreen();  // rebuilt fresh every time
+    case 4: return const ProfileScreen();  
     default: return const HomeScreen();
   }
 }

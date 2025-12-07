@@ -35,7 +35,7 @@ class CrewApp extends StatelessWidget {
       
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: themeProvider.themeMode,   // 🔥 NOW IT WORKS
+      themeMode: themeProvider.themeMode,  
 
       initialRoute: '/',
       routes: {

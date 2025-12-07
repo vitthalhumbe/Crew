@@ -33,7 +33,6 @@ class CrewOverviewTab extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
 
-              // ---------------- DESCRIPTION ----------------
               Text("Description", style: theme.textTheme.titleMedium),
               const SizedBox(height: 6),
               Text(
@@ -42,8 +41,7 @@ class CrewOverviewTab extends StatelessWidget {
               ),
 
               const SizedBox(height: 20),
-
-              // ---------------- PROGRESS CARD ----------------
+              
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
@@ -78,7 +76,6 @@ class CrewOverviewTab extends StatelessWidget {
 
               const SizedBox(height: 30),
 
-              // ---------------- TASK LIST BUTTON ----------------
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -101,9 +98,6 @@ class CrewOverviewTab extends StatelessWidget {
     );
   }
 
-  // -----------------------------------------------------------
-  // Load description + total tasks + completed tasks
-  // -----------------------------------------------------------
   Future<Map<String, dynamic>> _loadOverviewData(
     ProgressService service,
     String uid,

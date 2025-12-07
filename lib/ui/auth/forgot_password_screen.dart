@@ -64,8 +64,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
-              // BACK + TITLE
               Row(
                 children: [
                   IconButton(
@@ -94,7 +92,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
               const SizedBox(height: 30),
 
-              // EMAIL FIELD
               Text("Email", style: Theme.of(context).textTheme.labelLarge),
               const SizedBox(height: 6),
               TextField(
@@ -110,7 +107,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
               const SizedBox(height: 20),
 
-              // ERROR MESSAGE
               if (errorMessage != null)
                 Container(
                   padding: const EdgeInsets.all(14),
@@ -135,7 +131,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
               const SizedBox(height: 20),
 
-              // SEND RESET LINK BUTTON
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -169,7 +164,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
               const SizedBox(height: 20),
 
-              // SUCCESS MESSAGE
               if (emailSent)
                 Container(
                   padding: const EdgeInsets.all(14),

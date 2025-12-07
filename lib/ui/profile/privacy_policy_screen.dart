@@ -25,11 +25,11 @@ class PrivacyPolicyScreen extends StatelessWidget {
               const SizedBox(height: 20),
 
               Text(
-                "• We collect basic profile details such as name, email, bio, and avatar.\n"
-                "• Your data is securely stored using Firebase Authentication & Firestore.\n"
-                "• We do not sell or share your personal information.\n"
-                "• You can request deletion of your account anytime.\n"
-                "• This app is designed for educational and personal use.",
+                "> We collect basic profile details such as name, email, bio, and avatar.\n"
+                "> Your data is securely stored using Firebase Authentication & Firestore.\n"
+                "> We do not sell or share your personal information.\n"
+                "> You can request deletion of your account anytime.\n"
+                "> This app is designed for educational and personal use.",
                 style: theme.textTheme.bodyLarge,
               ),
 

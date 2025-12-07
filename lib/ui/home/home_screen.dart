@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/progress_service.dart';
-
 import '../crews/crew_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -24,24 +23,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> loadHomeData() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-  final progress = ProgressService();
+    final progress = ProgressService();
 
-  final completed = await progress.getTotalTasksCompleted(user.uid);
-  final joined = await progress.getCrewsJoined(user.uid);
-  final users = await FirebaseFirestore.instance.collection("users").doc(user.uid).get();
-  setState(() {
-    tasksCompleted = completed;
-    crewIds = List<String>.from(joined == 0 ? [] : []);
-    crewIds = (users)
-        .data()?["crews"]
-        ?.cast<String>() ?? [];
-    isLoading = false;
-  });
-}
-
+    final completed = await progress.getTotalTasksCompleted(user.uid);
+    final joined = await progress.getCrewsJoined(user.uid);
+    final users = await FirebaseFirestore.instance
+        .collection("users")
+        .doc(user.uid)
+        .get();
+    setState(() {
+      tasksCompleted = completed;
+      crewIds = List<String>.from(joined == 0 ? [] : []);
+      crewIds = (users).data()?["crews"]?.cast<String>() ?? [];
+      isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,8 +52,10 @@ class _HomeScreenState extends State<HomeScreen> {
         child: isLoading
             ? const Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -68,16 +69,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        IconButton(
-                          onPressed: () {},
-                          icon: const Icon(Icons.notifications_none),
-                        ),
                       ],
                     ),
 
                     const SizedBox(height: 20),
 
-                    // ---------------- QUICK STATS ----------------
                     Text(
                       "Quick stats",
                       style: theme.textTheme.titleMedium?.copyWith(
@@ -113,7 +109,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     const SizedBox(height: 28),
 
-                    // ---------------- YOUR CREWS ----------------
                     Text(
                       "Your crews",
                       style: theme.textTheme.titleMedium?.copyWith(
@@ -137,68 +132,60 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ------------------------------------------------------------------
-  // DYNAMIC CREW CARD FROM FIRESTORE
-  // ------------------------------------------------------------------
- Widget _buildCrewItem(String crewId) {
-  final theme = Theme.of(context);
-  final uid = FirebaseAuth.instance.currentUser!.uid;
-  final progressService = ProgressService();
+  Widget _buildCrewItem(String crewId) {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final progressService = ProgressService();
 
-  return StreamBuilder<DocumentSnapshot>(
-    stream: FirebaseFirestore.instance
-        .collection("crews")
-        .doc(crewId)
-        .snapshots(),
-    builder: (context, snapshot) {
-      if (!snapshot.hasData || !snapshot.data!.exists) {
-        return const SizedBox.shrink();
-      }
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection("crews")
+          .doc(crewId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return const SizedBox.shrink();
+        }
 
-      final data = snapshot.data!.data() as Map<String, dynamic>;
-      final title = data["name"] ?? "Unnamed Crew";
-      final caption = data["notice"] ?? "No updates yet";
+        final data = snapshot.data!.data() as Map<String, dynamic>;
+        final title = data["name"] ?? "Unnamed Crew";
+        final caption = data["notice"] ?? "No updates yet";
 
-      // -----------------------
-      // NOW FETCH USER PROGRESS
-      // -----------------------
-      return FutureBuilder<double>(
-        future: progressService.getUserProgressInCrew(crewId, uid),
-        builder: (context, progressSnap) {
-          if (!progressSnap.hasData) {
-            return _crewItem(
-              context,
-              title: title,
-              caption: caption,
-              progress: 0.0, // temporary loading state
-            );
-          }
-
-          final progress = progressSnap.data ?? 0.0;
-
-          return GestureDetector(
-            onTap: () {
-              Navigator.push(
+        return FutureBuilder<double>(
+          future: progressService.getUserProgressInCrew(crewId, uid),
+          builder: (context, progressSnap) {
+            if (!progressSnap.hasData) {
+              return _crewItem(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => CrewDetailScreen(crewId: crewId),
-                ),
+                title: title,
+                caption: caption,
+                progress: 0.0, 
               );
-            },
-            child: _crewItem(
-              context,
-              title: title,
-              caption: caption,
-              progress: progress,
-            ),
-          );
-        },
-      );
-    },
-  );
-}
+            }
 
-  // ---------------- STAT CARD WIDGET ----------------
+            final progress = progressSnap.data ?? 0.0;
+
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CrewDetailScreen(crewId: crewId),
+                  ),
+                );
+              },
+              child: _crewItem(
+                context,
+                title: title,
+                caption: caption,
+                progress: progress,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _statCard(
     BuildContext context, {
     required IconData icon,
@@ -248,7 +235,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ---------------- CREW ITEM WIDGET ----------------
   Widget _crewItem(
     BuildContext context, {
     required String title,
@@ -276,10 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const SizedBox(height: 12),
 
-          Text(
-            "progress",
-            style: theme.textTheme.bodyMedium,
-          ),
+          Text("progress", style: theme.textTheme.bodyMedium),
 
           const SizedBox(height: 12),
 
@@ -288,10 +271,8 @@ class _HomeScreenState extends State<HomeScreen> {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 6,
-              backgroundColor:
-                  theme.colorScheme.onSurface.withOpacity(0.1),
-              valueColor:
-                  AlwaysStoppedAnimation(theme.colorScheme.primary),
+              backgroundColor: theme.colorScheme.onSurface.withOpacity(0.1),
+              valueColor: AlwaysStoppedAnimation(theme.colorScheme.primary),
             ),
           ),
 

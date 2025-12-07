@@ -82,8 +82,6 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
           backgroundColor: Colors.green,
         ),
       );
-
-      // CLEAR ALL FIELDS
       nameController.clear();
       descController.clear();
       setState(() {
@@ -112,7 +110,6 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // -------------------- HEADER --------------------
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -122,16 +119,10 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.notifications_none),
-                  ),
                 ],
               ),
 
               const SizedBox(height: 20),
-
-              // CARD CONTAINER
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
@@ -141,7 +132,6 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // -------------------- CREW NAME --------------------
                     Text(
                       "Crew Name",
                       style: theme.textTheme.titleMedium?.copyWith(
@@ -162,7 +152,6 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
 
                     const SizedBox(height: 20),
 
-                    // -------------------- DESCRIPTION --------------------
                     Text(
                       "Description",
                       style: theme.textTheme.titleMedium?.copyWith(
@@ -184,7 +173,6 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
 
                     const SizedBox(height: 20),
 
-                    // -------------------- PRIVATE TOGGLE --------------------
                     Row(
                       children: [
                         Container(
@@ -222,7 +210,6 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
 
                     const SizedBox(height: 10),
 
-                    // -------------------- PRIVATE CODE --------------------
                     if (isPrivate)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -230,9 +217,7 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
                           vertical: 14,
                         ),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceVariant.withOpacity(
-                            0.2,
-                          ),
+                          color: theme.colorScheme.surfaceVariant.withOpacity(0.2,),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: theme.colorScheme.outline.withOpacity(0.4),
@@ -243,9 +228,7 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
                             Text(
                               "Private Code",
                               style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurface.withOpacity(
-                                  0.6,
-                                ),
+                                color: theme.colorScheme.onSurface.withOpacity(0.6,),
                               ),
                             ),
                             const Spacer(),
@@ -263,7 +246,6 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
 
                     const SizedBox(height: 26),
 
-                    // -------------------- BUTTON --------------------
                     SizedBox(
                       width: double.infinity,
                       height: 50,

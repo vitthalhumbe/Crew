@@ -69,7 +69,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             return Scaffold(
               backgroundColor: theme.scaffoldBackgroundColor,
 
-              // ---------------------- BOTTOM BUTTON ----------------------
               bottomNavigationBar: Padding(
                 padding: const EdgeInsets.all(16),
                 child: SizedBox(
@@ -85,27 +84,29 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       ),
                     ),
                     onPressed: isCaptain
-    ? () {}
-    : isCompleted
-        ? null
-        : () async {
-            await ProgressService().toggleTaskCompletion(
-              crewId: widget.crewId,
-              taskId: widget.taskId,
-              userId: currentUid,
-            );
+                        ? () {}
+                        : isCompleted
+                        ? null
+                        : () async {
+                            await ProgressService().toggleTaskCompletion(
+                              crewId: widget.crewId,
+                              taskId: widget.taskId,
+                              userId: currentUid,
+                            );
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Task marked as completed")),
-            );
-          },
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Task marked as completed"),
+                              ),
+                            );
+                          },
 
                     child: Text(
                       isCaptain
                           ? "Edit Task"
                           : isCompleted
-                              ? "Completed"
-                              : "Mark it as Done",
+                          ? "Completed"
+                          : "Mark it as Done",
                       style: const TextStyle(fontSize: 16),
                     ),
                   ),
@@ -114,12 +115,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
               body: SafeArea(
                 child: SingleChildScrollView(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ---------------------- HEADER ----------------------
                       Row(
                         children: [
                           IconButton(
@@ -137,7 +139,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
                       const SizedBox(height: 20),
 
-                      // ---------------------- TITLE ----------------------
                       Text(
                         title,
                         style: theme.textTheme.headlineSmall?.copyWith(
@@ -147,7 +148,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
                       const SizedBox(height: 10),
 
-                      // ---------------------- CONCEPT CHIPS ----------------------
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
@@ -155,8 +155,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             .map(
                               (c) => Chip(
                                 label: Text(c),
-                                backgroundColor:
-                                    theme.colorScheme.primary.withOpacity(0.1),
+                                backgroundColor: theme.colorScheme.primary
+                                    .withOpacity(0.1),
                                 labelStyle: TextStyle(
                                   color: theme.colorScheme.primary,
                                   fontWeight: FontWeight.w600,
@@ -168,7 +168,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
                       const SizedBox(height: 18),
 
-                      // ---------------------- DESCRIPTION ----------------------
                       Text(
                         description,
                         style: theme.textTheme.bodyMedium?.copyWith(
@@ -177,8 +176,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       ),
 
                       const SizedBox(height: 20),
-
-                      // ---------------------- LINK SECTION ----------------------
                       if (link.isNotEmpty)
                         Container(
                           padding: const EdgeInsets.all(14),
@@ -200,8 +197,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                               GestureDetector(
                                 onTap: () async {
                                   if (await canLaunchUrl(Uri.parse(link))) {
-                                    await launchUrl(Uri.parse(link),
-                                        mode: LaunchMode.externalApplication);
+                                    await launchUrl(
+                                      Uri.parse(link),
+                                      mode: LaunchMode.externalApplication,
+                                    );
                                   }
                                 },
                                 child: Icon(

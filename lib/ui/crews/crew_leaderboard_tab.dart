@@ -100,15 +100,11 @@ class CrewLeaderboardTab extends StatelessWidget {
     );
   }
 
-  // ------------------------------------------------------------------
-  // BUILD LEADERBOARD DATA (REAL TASK PROGRESS)
-  // ------------------------------------------------------------------
   Future<List<Map<String, dynamic>>> _buildLeaderboard(
     List<String> members,
   ) async {
     List<Map<String, dynamic>> result = [];
 
-    // Load all tasks of this crew
     final tasksSnap = await FirebaseFirestore.instance
         .collection("crews")
         .doc(crewId)
@@ -120,7 +116,6 @@ class CrewLeaderboardTab extends StatelessWidget {
     for (String uid in members) {
       int done = 0;
 
-      // Count completed tasks for this user
       for (var task in tasksSnap.docs) {
         final completedBy = List<String>.from(task["completedBy"] ?? []);
         if (completedBy.contains(uid)) {
@@ -128,7 +123,6 @@ class CrewLeaderboardTab extends StatelessWidget {
         }
       }
 
-      // Fetch user name
       final userDoc =
           await FirebaseFirestore.instance.collection("users").doc(uid).get();
       final userData = userDoc.data() ?? {};
@@ -140,8 +134,7 @@ class CrewLeaderboardTab extends StatelessWidget {
         "total": totalTasks,
       });
     }
-
-    // Sort by most tasks completed
+    
     result.sort((a, b) => b["done"].compareTo(a["done"]));
 
     return result;
