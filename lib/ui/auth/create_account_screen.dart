@@ -18,24 +18,12 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passController = TextEditingController();
 
-  File? avatarFile;
-  String avatarPath = "";
 
   bool obscurePassword = true;
   bool acceptTerms = false;
   bool isLoading = false;
 
-  Future<void> pickAvatar() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
 
-    if (picked != null) {
-      setState(() {
-        avatarFile = File(picked.path);
-        avatarPath = picked.path; // Local path (NO FIREBASE STORAGE)
-      });
-    }
-  }
   Future<void> createAccount() async {
     if (!acceptTerms) return;
 
@@ -65,7 +53,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
         "name": name,
         "email": email,
         "bio": bio.isEmpty ? "No bio added yet." : bio,
-        "avatarUrl": avatarPath, // LOCAL ONLY
         "streak": 0,
         "crewsJoined": 0,
         "tasksCompleted": 0,
@@ -76,7 +63,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
       prefs.setString("user_name", name);
       prefs.setString("user_email", email);
       prefs.setString("user_bio", bio);
-      prefs.setString("user_avatar", avatarPath);
       prefs.setInt("user_streak", 0);
       prefs.setInt("user_crews", 0);
       prefs.setInt("user_tasks", 0);
@@ -116,37 +102,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                 "Create Account",
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 25),
-
-              Center(
-                child: GestureDetector(
-                  onTap: pickAvatar,
-                  child: Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 55,
-                        backgroundColor: Colors.grey.shade300,
-                        backgroundImage:
-                            avatarFile != null ? FileImage(avatarFile!) : null,
-                        child: avatarFile == null
-                            ? const Icon(Icons.person, size: 60)
-                            : null,
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: theme.colorScheme.primary,
-                          child: const Icon(Icons.camera_alt,
-                              size: 18, color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
 

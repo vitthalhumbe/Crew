@@ -50,8 +50,6 @@ class CrewMembersTab extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      const CircleAvatar(radius: 22),
-                      const SizedBox(width: 14),
                       Expanded(
                         child: Text(
                           isCaptain ? "$name (Captain)" : name,

@@ -17,7 +17,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String name = "";
   String email = "";
   String bio = "";
-  String avatarBase64 = ""; // now Base64
   int streak = 0;
   int crewsJoined = 0;
   int tasksCompleted = 0;
@@ -41,7 +40,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       name = prefs.getString("user_name") ?? "";
       email = prefs.getString("user_email") ?? "";
       bio = prefs.getString("user_bio") ?? "";
-      avatarBase64 = prefs.getString("user_avatar") ?? "";
       streak = prefs.getInt("user_streak") ?? 0;
       crewsJoined = prefs.getInt("user_crews") ?? 0;
       tasksCompleted = prefs.getInt("user_tasks") ?? 0;
@@ -53,7 +51,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     prefs.setString("user_name", name);
     prefs.setString("user_email", email);
     prefs.setString("user_bio", bio);
-    prefs.setString("user_avatar", avatarBase64);
     prefs.setInt("user_streak", streak);
     prefs.setInt("user_crews", crewsJoined);
     prefs.setInt("user_tasks", tasksCompleted);
@@ -69,8 +66,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    final doc =
-        await FirebaseFirestore.instance.collection("users").doc(user.uid).get();
+    final doc = await FirebaseFirestore.instance
+        .collection("users")
+        .doc(user.uid)
+        .get();
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
@@ -81,9 +80,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         name = data["name"] ?? "";
         email = user.email ?? "";
         bio = data["bio"] ?? "";
-
-        // Avatar ALWAYS local
-        avatarBase64 = prefs.getString("user_avatar") ?? "";
 
         streak = data["streak"] ?? 0;
         crewsJoined = data["crewsJoined"] ?? 0;
@@ -97,7 +93,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         name = user.displayName ?? "User";
         email = user.email ?? "";
         bio = "No bio added yet.";
-        avatarBase64 = prefs.getString("user_avatar") ?? "";
         streak = 0;
         crewsJoined = 0;
         tasksCompleted = 0;
@@ -114,9 +109,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     saveLocalData();
   }
 
-  // ---------------------------------------------------------------
-  // LOGOUT CONFIRM
-  // ---------------------------------------------------------------
   void confirmLogout() {
     showDialog(
       context: context,
@@ -142,9 +134,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ---------------------------------------------------------------
-  // LOGOUT
-  // ---------------------------------------------------------------
   Future<void> logout() async {
     await FirebaseAuth.instance.signOut();
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -159,15 +148,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    ImageProvider? avatarProvider;
-    if (avatarBase64.isNotEmpty) {
-      try {
-        avatarProvider = MemoryImage(base64Decode(avatarBase64));
-      } catch (_) {
-        avatarProvider = null;
-      }
-    }
-
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
@@ -178,9 +158,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    //--------------------------------------------------------------------
-                    // HEADER
-                    //--------------------------------------------------------------------
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -205,7 +182,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     builder: (_) => EditProfileScreen(
                                       currentName: name,
                                       currentBio: bio,
-                                      currentAvatarUrl: avatarBase64,
                                     ),
                                   ),
                                 );
@@ -231,18 +207,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       child: Row(
                         children: [
-                          CircleAvatar(
-                            radius: 35,
-                            backgroundColor:
-                                theme.colorScheme.primary.withOpacity(0.15),
-                            backgroundImage: avatarProvider,
-                            child: avatarProvider == null
-                                ? Icon(Icons.person,
-                                    size: 38,
-                                    color: theme.colorScheme.primary)
-                                : null,
-                          ),
-                          const SizedBox(width: 16),
+
+
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,7 +232,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 Text(
                                   bio,
                                   maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: theme.colorScheme.onSurface
@@ -314,8 +279,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text("Overall tasks completed",
-                                    style: theme.textTheme.titleMedium),
+                                Text(
+                                  "Overall tasks completed",
+                                  style: theme.textTheme.titleMedium,
+                                ),
                                 Text(
                                   "Keep up your fire!",
                                   style: TextStyle(
@@ -329,8 +296,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           CircleAvatar(
                             radius: 22,
-                            backgroundColor:
-                                theme.colorScheme.primary.withOpacity(0.15),
+                            backgroundColor: theme.colorScheme.primary
+                                .withOpacity(0.15),
                             child: Text(
                               tasksCompleted.toString(),
                               style: TextStyle(
@@ -339,7 +306,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 fontSize: 16,
                               ),
                             ),
-                          )
+                          ),
                         ],
                       ),
                     ),
@@ -361,7 +328,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => const SettingsScreen()),
+                            builder: (context) => const SettingsScreen(),
+                          ),
                         );
                       },
                     ),

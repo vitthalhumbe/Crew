@@ -51,8 +51,6 @@ class CrewLeaderboardTab extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                           )),
                       const SizedBox(width: 16),
-                      const CircleAvatar(radius: 22),
-                      const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

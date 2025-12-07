@@ -76,8 +76,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context,
       MaterialPageRoute(builder: (_) => EditProfileScreen(
         currentName: "", 
-        currentBio: "", 
-        currentAvatarUrl: "",
+        currentBio: "",
       )),
     );
   },
