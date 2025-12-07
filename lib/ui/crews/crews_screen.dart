@@ -1,7 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class CrewsScreen extends StatelessWidget {
+import 'crew_detail_screen.dart';
+
+class CrewsScreen extends StatefulWidget {
   const CrewsScreen({super.key});
+
+  @override
+  State<CrewsScreen> createState() => _CrewsScreenState();
+}
+
+class _CrewsScreenState extends State<CrewsScreen> {
+  List<String> userCrewIds = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchUserCrews();
+  }
+
+  Future<void> fetchUserCrews() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance
+        .collection("users")
+        .doc(user.uid)
+        .get();
+
+    final data = doc.data();
+    if (data == null) return;
+
+    setState(() {
+      userCrewIds = List<String>.from(data["crews"] ?? []);
+      isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -10,66 +46,82 @@ class CrewsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              
-              // ---------------- TOP BAR ----------------
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Your Crews",
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : userCrewIds.isEmpty
+                ? Center(
+                    child: Text(
+                      "You haven't joined any crews yet.",
+                      style: theme.textTheme.titleMedium,
                     ),
-                  ),
-
-                  Row(
+                  )
+                : ListView(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     children: [
-                      IconButton(
-                        onPressed: () {},
-                        icon: const Icon(Icons.notifications_none),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Your Crews",
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () {},
+                            icon: const Icon(Icons.notifications_none),
+                          ),
+                        ],
                       ),
+
+                      const SizedBox(height: 20),
+
+                      // CREW LIST BUILDER
+                      ...userCrewIds.map((id) => _buildCrewStreamCard(id)),
                     ],
                   ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // ---------------- CREW LIST ----------------
-              _crewCard(
-                context,
-                title: "English speaking",
-                progress: 0.75,
-              ),
-
-              const SizedBox(height: 16),
-
-              _crewCard(
-                context,
-                title: "Python Course",
-                progress: 0.42,
-              ),
-
-              const SizedBox(height: 16),
-
-              _crewCard(
-                context,
-                title: "Data Analytics",
-                progress: 1.00,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
 
-  // ---------------- CREW CARD WIDGET ----------------
+  // Fetch each crew live
+  Widget _buildCrewStreamCard(String crewId) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection("crews")
+          .doc(crewId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox.shrink();
+        }
+
+        if (!snapshot.data!.exists) {
+          return const SizedBox.shrink();
+        }
+
+        final data = snapshot.data!.data() as Map<String, dynamic>;
+
+        String title = data["name"] ?? "Unnamed Crew";
+        double progress = 0.3; // you will update later when tasks exist
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CrewDetailScreen(crewId: crewId),
+              ),
+            );
+          },
+          child: _crewCard(context, title: title, progress: progress),
+        );
+      },
+    );
+  }
+
+  // UI card widget
   Widget _crewCard(
     BuildContext context, {
     required String title,
@@ -78,6 +130,7 @@ class CrewsScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
+      margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
@@ -86,8 +139,6 @@ class CrewsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          
-          // TITLE
           Text(
             title,
             style: theme.textTheme.titleMedium?.copyWith(
@@ -97,7 +148,6 @@ class CrewsScreen extends StatelessWidget {
 
           const SizedBox(height: 14),
 
-          // PROGRESS LABEL + % RIGHT
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -118,15 +168,16 @@ class CrewsScreen extends StatelessWidget {
 
           const SizedBox(height: 10),
 
-          // PROGRESS BAR
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 6,
-              backgroundColor: theme.colorScheme.onSurface.withOpacity(0.08),
-              valueColor:
-                  AlwaysStoppedAnimation(theme.colorScheme.secondary.withOpacity(0.6)),
+              backgroundColor:
+                  theme.colorScheme.onSurface.withOpacity(0.08),
+              valueColor: AlwaysStoppedAnimation(
+                theme.colorScheme.secondary.withOpacity(0.6),
+              ),
             ),
           ),
         ],

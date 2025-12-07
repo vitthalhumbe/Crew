@@ -7,7 +7,6 @@ import '../profile/edit_profile_screen.dart';
 import 'about_screen.dart';
 import 'privacy_policy_screen.dart';
 import 'notification_settings.dart';
-import 'edit_profile_screen.dart';
 
 
 class SettingsScreen extends StatefulWidget {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../crews/crew_detail_screen.dart';
 
 
 class CreateCrewScreen extends StatefulWidget {
@@ -67,6 +68,12 @@ Future<void> createCrew() async {
       "memberCount": 1,
     });
 
+    Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => CrewDetailScreen(crewId: crewId),
+  ),
+);
     // SUCCESS POPUP
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(

@@ -1,7 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class HomeScreen extends StatelessWidget {
+import '../crews/crew_detail_screen.dart';
+
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int tasksCompleted = 0;
+  List<String> crewIds = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    loadHomeData();
+  }
+
+  Future<void> loadHomeData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final doc =
+        await FirebaseFirestore.instance.collection("users").doc(user.uid).get();
+
+    final data = doc.data() ?? {};
+
+    setState(() {
+      tasksCompleted = data["tasksCompleted"] ?? 0;
+      crewIds = List<String>.from(data["crews"] ?? []);
+      isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -10,99 +45,131 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ---------------- TOP BAR ----------------
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Crew",
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ---------------- TOP BAR ----------------
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Crew",
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {},
+                          icon: const Icon(Icons.notifications_none),
+                        ),
+                      ],
                     ),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.notifications_none),
-                  ),
-                ],
-              ),
 
-              const SizedBox(height: 20),
+                    const SizedBox(height: 20),
 
-              // ---------------- QUICK STATS ----------------
-              Text(
-                "Quick stats",
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+                    // ---------------- QUICK STATS ----------------
+                    Text(
+                      "Quick stats",
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _statCard(
+                            context,
+                            icon: Icons.check_circle_outline,
+                            iconColor: theme.colorScheme.primary,
+                            count: "$tasksCompleted",
+                            label: "Tasks completed",
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _statCard(
+                            context,
+                            icon: Icons.rocket_launch_outlined,
+                            iconColor: theme.colorScheme.secondary,
+                            count: "${crewIds.length}",
+                            label: "Joined Crews",
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    // ---------------- YOUR CREWS ----------------
+                    Text(
+                      "Your crews",
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    if (crewIds.isEmpty)
+                      Text(
+                        "You have not joined any crews yet.",
+                        style: theme.textTheme.bodyMedium,
+                      ),
+
+                    ...crewIds.map((id) => _buildCrewItem(id)),
+                  ],
                 ),
               ),
-
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _statCard(
-                      context,
-                      icon: Icons.check_circle_outline,
-                      iconColor: Theme.of(context).colorScheme.primary,
-                      count: "12",
-                      label: "Task completed",
-                    ),
-                  ),
-
-                  const SizedBox(width: 12),
-
-                  Expanded(
-                    child: _statCard(
-                      context,
-                      icon: Icons.rocket_launch_outlined,
-                      iconColor: Theme.of(context).colorScheme.secondary,
-                      count: "3",
-                      label: "Joined Crew",
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 28),
-
-              // ---------------- YOUR CREWS ----------------
-              Text(
-                "Your crews",
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-
-              const SizedBox(height: 14),
-
-              _crewItem(
-                context,
-                title: "English speaking",
-                progress: 0.75,
-                caption:
-                    "This week we are focusing on improving vocabulary and doing exercises…",
-              ),
-
-              const SizedBox(height: 14),
-
-              _crewItem(
-                context,
-                title: "Python Course",
-                progress: 0.32,
-                caption:
-                    "Hey everyone, solve given problems before Monday submission…",
-              ),
-            ],
-          ),
-        ),
       ),
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // DYNAMIC CREW CARD FROM FIRESTORE
+  // ------------------------------------------------------------------
+  Widget _buildCrewItem(String crewId) {
+    final theme = Theme.of(context);
+
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection("crews")
+          .doc(crewId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return const SizedBox.shrink();
+        }
+
+        final data = snapshot.data!.data() as Map<String, dynamic>;
+        final title = data["name"] ?? "Unnamed Crew";
+        final caption = data["description"] ?? "No updates yet";
+        final progress = 0.0; // later when tasks exist
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CrewDetailScreen(crewId: crewId),
+              ),
+            );
+          },
+          child: _crewItem(
+            context,
+            title: title,
+            caption: caption,
+            progress: progress,
+          ),
+        );
+      },
     );
   }
 
@@ -125,7 +192,6 @@ class HomeScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ICON WITH BACKGROUND
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -168,6 +234,7 @@ class HomeScreen extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(18),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
@@ -186,26 +253,25 @@ class HomeScreen extends StatelessWidget {
 
           Text(
             "progress",
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.normal,
-            ),
+            style: theme.textTheme.bodyMedium,
           ),
 
           const SizedBox(height: 12),
-          // PROGRESS BAR
+
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 6,
-              backgroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.1),
-              valueColor: AlwaysStoppedAnimation(theme.colorScheme.primary),
+              backgroundColor:
+                  theme.colorScheme.onSurface.withOpacity(0.1),
+              valueColor:
+                  AlwaysStoppedAnimation(theme.colorScheme.primary),
             ),
           ),
 
           const SizedBox(height: 12),
 
-          // CAPTION (1 line, ellipsis)
           RichText(
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

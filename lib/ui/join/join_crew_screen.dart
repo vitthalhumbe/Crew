@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../crews/crew_detail_screen.dart';
 
 class JoinCrewScreen extends StatefulWidget {
   const JoinCrewScreen({super.key});
@@ -58,6 +59,13 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
       "crews": FieldValue.arrayUnion([crew.id])
     }, SetOptions(merge: true));
 
+Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => CrewDetailScreen(crewId: crew.id),
+  ),
+);
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Joined ${crew["name"]}!")),
     );
@@ -111,6 +119,12 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
       "crewsJoined": FieldValue.increment(1),
       "crews": FieldValue.arrayUnion([crew.id])
     }, SetOptions(merge: true));
+  Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => CrewDetailScreen(crewId: crew.id),
+  ),
+);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Joined ${crew["name"]} successfully!")),
