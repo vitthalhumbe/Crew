@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../crews/crew_detail_screen.dart';
 
-
 class CreateCrewScreen extends StatefulWidget {
   const CreateCrewScreen({super.key});
 
@@ -34,73 +33,72 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
         "-${nums[rand.nextInt(10)]}${nums[rand.nextInt(10)]}${nums[rand.nextInt(10)]}";
   }
 
-Future<void> createCrew() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("You must be logged in")),
-    );
-    return;
+  Future<void> createCrew() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("You must be logged in")));
+      return;
+    }
+
+    final name = nameController.text.trim();
+    final desc = descController.text.trim();
+
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Crew name cannot be empty")),
+      );
+      return;
+    }
+
+    try {
+      final crewId = FirebaseFirestore.instance.collection("crews").doc().id;
+
+      await FirebaseFirestore.instance.collection("crews").doc(crewId).set({
+        "crewId": crewId,
+        "name": name,
+        "description": desc,
+        "isPrivate": isPrivate,
+        "privateCode": isPrivate ? privateCode : "",
+        "createdBy": user.uid,
+        "createdAt": DateTime.now(),
+        "members": [user.uid],
+        "memberCount": 1,
+      });
+      FirebaseFirestore.instance.collection("users").doc(user.uid).set({
+        "crewsJoined": FieldValue.increment(1),
+        "crews": FieldValue.arrayUnion([crewId]),
+      }, SetOptions(merge: true));
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => CrewDetailScreen(crewId: crewId)),
+      );
+      // SUCCESS POPUP
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Crew created successfully!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // CLEAR ALL FIELDS
+      nameController.clear();
+      descController.clear();
+      setState(() {
+        isPrivate = false;
+        privateCode = _generateCode();
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to create crew: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
-
-  final name = nameController.text.trim();
-  final desc = descController.text.trim();
-
-  if (name.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Crew name cannot be empty")),
-    );
-    return;
-  }
-
-  try {
-    final crewId = FirebaseFirestore.instance.collection("crews").doc().id;
-
-    await FirebaseFirestore.instance.collection("crews").doc(crewId).set({
-      "crewId": crewId,
-      "name": name,
-      "description": desc,
-      "isPrivate": isPrivate,
-      "privateCode": isPrivate ? privateCode : "",
-      "createdBy": user.uid,
-      "createdAt": DateTime.now(),
-      "members": [user.uid],
-      "memberCount": 1,
-    });
-
-    Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => CrewDetailScreen(crewId: crewId),
-  ),
-);
-    // SUCCESS POPUP
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Crew created successfully!"),
-        backgroundColor: Colors.green,
-      ),
-    );
-
-    // CLEAR ALL FIELDS
-    nameController.clear();
-    descController.clear();
-    setState(() {
-      isPrivate = false;
-      privateCode = _generateCode();
-    });
-
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Failed to create crew: $e"),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-}
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -114,7 +112,6 @@ Future<void> createCrew() async {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               // -------------------- HEADER --------------------
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -144,12 +141,13 @@ Future<void> createCrew() async {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
                     // -------------------- CREW NAME --------------------
-                    Text("Crew Name",
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        )),
+                    Text(
+                      "Crew Name",
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const SizedBox(height: 6),
 
                     TextField(
@@ -165,10 +163,12 @@ Future<void> createCrew() async {
                     const SizedBox(height: 20),
 
                     // -------------------- DESCRIPTION --------------------
-                    Text("Description",
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        )),
+                    Text(
+                      "Description",
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const SizedBox(height: 6),
 
                     TextField(
@@ -226,10 +226,13 @@ Future<void> createCrew() async {
                     if (isPrivate)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 14),
+                          horizontal: 14,
+                          vertical: 14,
+                        ),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceVariant
-                              .withOpacity(0.2),
+                          color: theme.colorScheme.surfaceVariant.withOpacity(
+                            0.2,
+                          ),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: theme.colorScheme.outline.withOpacity(0.4),
@@ -240,8 +243,9 @@ Future<void> createCrew() async {
                             Text(
                               "Private Code",
                               style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurface
-                                    .withOpacity(0.6),
+                                color: theme.colorScheme.onSurface.withOpacity(
+                                  0.6,
+                                ),
                               ),
                             ),
                             const Spacer(),

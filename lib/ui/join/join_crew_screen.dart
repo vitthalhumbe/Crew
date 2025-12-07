@@ -23,14 +23,16 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
   // JOIN PUBLIC CREW
   // =============================================================
   Future<void> joinPublicCrew(DocumentSnapshot crew) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Please log in to join a crew.")),
+    );
+    return;
+  }
 
-    List<dynamic> members = crew["members"];
-    final userRef =
-        FirebaseFirestore.instance.collection("users").doc(user.uid);
-
-    // Prevent duplicate join
+  try {
+    List<dynamic> members = (crew.data() as Map<String, dynamic>)['members'] ?? [];
     if (members.contains(user.uid)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("You're already a member of ${crew["name"]}!")),
@@ -38,6 +40,7 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
       return;
     }
 
+    final userRef = FirebaseFirestore.instance.collection("users").doc(user.uid);
     final userDoc = await userRef.get();
     List<dynamic> userCrews = userDoc.data()?["crews"] ?? [];
 
@@ -48,28 +51,38 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
       return;
     }
 
-    // Add user to crew
+    // do transforms (arrayUnion)
     await crew.reference.update({
       "members": FieldValue.arrayUnion([user.uid])
     });
 
-    // Add crew to user profile
     await userRef.set({
       "crewsJoined": FieldValue.increment(1),
       "crews": FieldValue.arrayUnion([crew.id])
     }, SetOptions(merge: true));
 
-Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => CrewDetailScreen(crewId: crew.id),
-  ),
-);
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Joined ${crew["name"]}!")),
     );
+
+    // navigate to crew details (optional)
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => CrewDetailScreen(crewId: crew.id)),
+    );
+  } on FirebaseException catch (e) {
+    // FirebaseException contains .code, useful for inspection
+    debugPrint("Join crew failed: ${e.code} ${e.message}");
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Failed to join crew: ${e.code}")),
+    );
+  } catch (e) {
+    debugPrint("Join crew unexpected error: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Unexpected error occurred.")),
+    );
   }
+}
 
   // =============================================================
   // JOIN PRIVATE CREW
