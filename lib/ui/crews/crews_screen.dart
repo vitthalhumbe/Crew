@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import '../../services/progress_service.dart';
 import 'crew_detail_screen.dart';
 
 class CrewsScreen extends StatefulWidget {
@@ -86,40 +86,51 @@ class _CrewsScreenState extends State<CrewsScreen> {
   }
 
   // Fetch each crew live
-  Widget _buildCrewStreamCard(String crewId) {
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection("crews")
-          .doc(crewId)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const SizedBox.shrink();
-        }
+ Widget _buildCrewStreamCard(String crewId) {
+  final uid = FirebaseAuth.instance.currentUser!.uid;
+  final progressService = ProgressService();
 
-        if (!snapshot.data!.exists) {
-          return const SizedBox.shrink();
-        }
+  return StreamBuilder<DocumentSnapshot>(
+    stream: FirebaseFirestore.instance
+        .collection("crews")
+        .doc(crewId)
+        .snapshots(),
+    builder: (context, snapshot) {
+      if (!snapshot.hasData || !snapshot.data!.exists) {
+        return const SizedBox.shrink();
+      }
 
-        final data = snapshot.data!.data() as Map<String, dynamic>;
+      final data = snapshot.data!.data() as Map<String, dynamic>;
+      final title = data["name"] ?? "Unnamed Crew";
 
-        String title = data["name"] ?? "Unnamed Crew";
-        double progress = 0.3; // you will update later when tasks exist
+      // ------------------------------
+      // FETCH USER'S REAL PROGRESS
+      // ------------------------------
+      return FutureBuilder<double>(
+        future: progressService.getUserProgressInCrew(crewId, uid),
+        builder: (context, progressSnap) {
+          double progress = progressSnap.data ?? 0.0;
 
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CrewDetailScreen(crewId: crewId),
+                ),
+              );
+            },
+            child: _crewCard(
               context,
-              MaterialPageRoute(
-                builder: (_) => CrewDetailScreen(crewId: crewId),
-              ),
-            );
-          },
-          child: _crewCard(context, title: title, progress: progress),
-        );
-      },
-    );
-  }
+              title: title,
+              progress: progress,
+            ),
+          );
+        },
+      );
+    },
+  );
+}
 
   // UI card widget
   Widget _crewCard(

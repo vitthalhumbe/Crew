@@ -10,22 +10,30 @@ class CrewLeaderboardTab extends StatelessWidget {
     final theme = Theme.of(context);
 
     return StreamBuilder<DocumentSnapshot>(
-      stream:
-          FirebaseFirestore.instance.collection("crews").doc(crewId).snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
+      stream: FirebaseFirestore.instance
+          .collection("crews")
+          .doc(crewId)
+          .snapshots(),
+      builder: (context, crewSnap) {
+        if (!crewSnap.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final data = snapshot.data!.data() as Map<String, dynamic>;
-        final members = data["members"] as List<dynamic>;
+        final crewData = crewSnap.data!.data() as Map<String, dynamic>;
+        final members = List<String>.from(crewData["members"] ?? []);
 
         return FutureBuilder<List<Map<String, dynamic>>>(
-          future: _getLeaderboardData(members),
+          future: _buildLeaderboard(members),
           builder: (context, snap) {
-            if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+            if (!snap.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
             final leaderboard = snap.data!;
+
+            if (leaderboard.isEmpty) {
+              return const Center(child: Text("No members yet."));
+            }
 
             return ListView.builder(
               padding: const EdgeInsets.all(20),
@@ -33,9 +41,6 @@ class CrewLeaderboardTab extends StatelessWidget {
               itemBuilder: (context, index) {
                 final user = leaderboard[index];
                 final rank = index + 1;
-                final tasksDone = user["tasksDone"];
-                final totalTasks = user["totalTasks"];
-                final progress = tasksDone / totalTasks;
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 14),
@@ -46,28 +51,44 @@ class CrewLeaderboardTab extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Text(rank.toString(),
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          )),
+                      Text(
+                        "$rank",
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(width: 16),
+
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(user["name"],
-                                style: theme.textTheme.bodyLarge),
-                            const SizedBox(height: 6),
-                            LinearProgressIndicator(
-                              value: progress,
-                              minHeight: 6,
+                            Text(
+                              user["name"],
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
+                            const SizedBox(height: 6),
+
+                            LinearProgressIndicator(
+                              value: user["total"] == 0
+                                  ? 0
+                                  : user["done"] / user["total"],
+                              minHeight: 6,
+                              backgroundColor: Colors.grey.shade300,
+                              color: theme.colorScheme.primary,
+                            ),
+
                             const SizedBox(height: 4),
-                            Text("$tasksDone/$totalTasks Tasks",
-                                style: theme.textTheme.bodySmall),
+
+                            Text(
+                              "${user["done"]}/${user["total"]} tasks",
+                              style: theme.textTheme.bodySmall,
+                            ),
                           ],
                         ),
-                      )
+                      ),
                     ],
                   ),
                 );
@@ -79,23 +100,50 @@ class CrewLeaderboardTab extends StatelessWidget {
     );
   }
 
-  Future<List<Map<String, dynamic>>> _getLeaderboardData(
-      List<dynamic> members) async {
-    List<Map<String, dynamic>> data = [];
+  // ------------------------------------------------------------------
+  // BUILD LEADERBOARD DATA (REAL TASK PROGRESS)
+  // ------------------------------------------------------------------
+  Future<List<Map<String, dynamic>>> _buildLeaderboard(
+    List<String> members,
+  ) async {
+    List<Map<String, dynamic>> result = [];
+
+    // Load all tasks of this crew
+    final tasksSnap = await FirebaseFirestore.instance
+        .collection("crews")
+        .doc(crewId)
+        .collection("tasks")
+        .get();
+
+    final totalTasks = tasksSnap.docs.length;
 
     for (String uid in members) {
+      int done = 0;
+
+      // Count completed tasks for this user
+      for (var task in tasksSnap.docs) {
+        final completedBy = List<String>.from(task["completedBy"] ?? []);
+        if (completedBy.contains(uid)) {
+          done++;
+        }
+      }
+
+      // Fetch user name
       final userDoc =
           await FirebaseFirestore.instance.collection("users").doc(uid).get();
-      final u = userDoc.data() as Map<String, dynamic>;
+      final userData = userDoc.data() ?? {};
 
-      data.add({
-        "name": u["name"],
-        "tasksDone": u["tasksCompleted"] ?? 0,
-        "totalTasks": 20
+      result.add({
+        "uid": uid,
+        "name": userData["name"] ?? "Unknown User",
+        "done": done,
+        "total": totalTasks,
       });
     }
 
-    data.sort((a, b) => b["tasksDone"].compareTo(a["tasksDone"]));
-    return data;
+    // Sort by most tasks completed
+    result.sort((a, b) => b["done"].compareTo(a["done"]));
+
+    return result;
   }
 }

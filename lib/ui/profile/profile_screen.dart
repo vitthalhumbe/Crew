@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'edit_profile_screen.dart';
+import '../../services/progress_service.dart';
 import 'settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -59,55 +60,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ---------------------------------------------------------------
   // FIRESTORE FETCH
   // ---------------------------------------------------------------
-  Future<void> fetchUserData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      setState(() => isLoading = false);
-      return;
-    }
+ Future<void> fetchUserData() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
 
-    final doc = await FirebaseFirestore.instance
-        .collection("users")
-        .doc(user.uid)
-        .get();
+  final doc = await FirebaseFirestore.instance.collection("users").doc(user.uid).get();
+  final data = doc.data() ?? {};
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+  final progress = ProgressService();
 
-    if (doc.exists) {
-      final data = doc.data()!;
+  final totalTasksCompleted = await progress.getTotalTasksCompleted(user.uid);
+  final totalCrews = await progress.getCrewsJoined(user.uid);
 
-      setState(() {
-        name = data["name"] ?? "";
-        email = user.email ?? "";
-        bio = data["bio"] ?? "";
+  setState(() {
+    name = data["name"] ?? "";
+    email = user.email ?? "";
+    bio = data["bio"] ?? "";
+    streak = data["streak"] ?? 0;
 
-        streak = data["streak"] ?? 0;
-        crewsJoined = data["crewsJoined"] ?? 0;
-        tasksCompleted = data["tasksCompleted"] ?? 0;
+    tasksCompleted = totalTasksCompleted;
+    crewsJoined = totalCrews;
 
-        isLoading = false;
-      });
-    } else {
-      // new user fallback
-      setState(() {
-        name = user.displayName ?? "User";
-        email = user.email ?? "";
-        bio = "No bio added yet.";
-        streak = 0;
-        crewsJoined = 0;
-        tasksCompleted = 0;
-        isLoading = false;
-      });
-
-      FirebaseFirestore.instance.collection("users").doc(user.uid).set({
-        "name": name,
-        "email": email,
-        "bio": bio,
-      }, SetOptions(merge: true));
-    }
-
-    saveLocalData();
-  }
+    isLoading = false;
+  });
+}
 
   void confirmLogout() {
     showDialog(

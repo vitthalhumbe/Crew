@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/progress_service.dart';
 
 class TaskDetailScreen extends StatefulWidget {
   final String crewId;
@@ -84,27 +85,21 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       ),
                     ),
                     onPressed: isCaptain
-                        ? () {
-                            // TODO: Edit task screen later
-                          }
-                        : isCompleted
-                            ? null
-                            : () async {
-                                await FirebaseFirestore.instance
-                                    .collection("crews")
-                                    .doc(widget.crewId)
-                                    .collection("tasks")
-                                    .doc(widget.taskId)
-                                    .update({
-                                  "completedBy":
-                                      FieldValue.arrayUnion([currentUid])
-                                });
+    ? () {}
+    : isCompleted
+        ? null
+        : () async {
+            await ProgressService().toggleTaskCompletion(
+              crewId: widget.crewId,
+              taskId: widget.taskId,
+              userId: currentUid,
+            );
 
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text("Task marked as completed")),
-                                );
-                              },
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Task marked as completed")),
+            );
+          },
+
                     child: Text(
                       isCaptain
                           ? "Edit Task"

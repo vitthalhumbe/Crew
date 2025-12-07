@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/progress_service.dart';
 
 import '../crews/crew_detail_screen.dart';
 
@@ -23,20 +24,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> loadHomeData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
 
-    final doc =
-        await FirebaseFirestore.instance.collection("users").doc(user.uid).get();
+  final progress = ProgressService();
 
-    final data = doc.data() ?? {};
+  final completed = await progress.getTotalTasksCompleted(user.uid);
+  final joined = await progress.getCrewsJoined(user.uid);
+  final users = await FirebaseFirestore.instance.collection("users").doc(user.uid).get();
+  setState(() {
+    tasksCompleted = completed;
+    crewIds = List<String>.from(joined == 0 ? [] : []);
+    crewIds = (users)
+        .data()?["crews"]
+        ?.cast<String>() ?? [];
+    isLoading = false;
+  });
+}
 
-    setState(() {
-      tasksCompleted = data["tasksCompleted"] ?? 0;
-      crewIds = List<String>.from(data["crews"] ?? []);
-      isLoading = false;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,42 +140,63 @@ class _HomeScreenState extends State<HomeScreen> {
   // ------------------------------------------------------------------
   // DYNAMIC CREW CARD FROM FIRESTORE
   // ------------------------------------------------------------------
-  Widget _buildCrewItem(String crewId) {
+ Widget _buildCrewItem(String crewId) {
+  final theme = Theme.of(context);
+  final uid = FirebaseAuth.instance.currentUser!.uid;
+  final progressService = ProgressService();
 
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection("crews")
-          .doc(crewId)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData || !snapshot.data!.exists) {
-          return const SizedBox.shrink();
-        }
+  return StreamBuilder<DocumentSnapshot>(
+    stream: FirebaseFirestore.instance
+        .collection("crews")
+        .doc(crewId)
+        .snapshots(),
+    builder: (context, snapshot) {
+      if (!snapshot.hasData || !snapshot.data!.exists) {
+        return const SizedBox.shrink();
+      }
 
-        final data = snapshot.data!.data() as Map<String, dynamic>;
-        final title = data["name"] ?? "Unnamed Crew";
-        final caption = data["notice"] ?? "No updates yet";
-        final progress = 0.0; // later when tasks exist
+      final data = snapshot.data!.data() as Map<String, dynamic>;
+      final title = data["name"] ?? "Unnamed Crew";
+      final caption = data["notice"] ?? "No updates yet";
 
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
+      // -----------------------
+      // NOW FETCH USER PROGRESS
+      // -----------------------
+      return FutureBuilder<double>(
+        future: progressService.getUserProgressInCrew(crewId, uid),
+        builder: (context, progressSnap) {
+          if (!progressSnap.hasData) {
+            return _crewItem(
               context,
-              MaterialPageRoute(
-                builder: (_) => CrewDetailScreen(crewId: crewId),
-              ),
+              title: title,
+              caption: caption,
+              progress: 0.0, // temporary loading state
             );
-          },
-          child: _crewItem(
-            context,
-            title: title,
-            caption: caption,
-            progress: progress,
-          ),
-        );
-      },
-    );
-  }
+          }
+
+          final progress = progressSnap.data ?? 0.0;
+
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CrewDetailScreen(crewId: crewId),
+                ),
+              );
+            },
+            child: _crewItem(
+              context,
+              title: title,
+              caption: caption,
+              progress: progress,
+            ),
+          );
+        },
+      );
+    },
+  );
+}
 
   // ---------------- STAT CARD WIDGET ----------------
   Widget _statCard(
