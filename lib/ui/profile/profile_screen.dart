@@ -1,10 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'edit_profile_screen.dart';
 import 'settings_screen.dart';
-import 'dart:io';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -17,7 +17,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String name = "";
   String email = "";
   String bio = "";
-  String avatarUrl = "";
+  String avatarBase64 = ""; // now Base64
   int streak = 0;
   int crewsJoined = 0;
   int tasksCompleted = 0;
@@ -31,7 +31,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     fetchUserData();
   }
 
-  // ------------------------------ LOCAL CACHE ------------------------------
+  // ---------------------------------------------------------------
+  // LOCAL CACHE
+  // ---------------------------------------------------------------
   Future<void> loadLocalData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
@@ -39,8 +41,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       name = prefs.getString("user_name") ?? "";
       email = prefs.getString("user_email") ?? "";
       bio = prefs.getString("user_bio") ?? "";
+      avatarBase64 = prefs.getString("user_avatar") ?? "";
       streak = prefs.getInt("user_streak") ?? 0;
-      avatarUrl = prefs.getString("user_avatar") ?? "";
       crewsJoined = prefs.getInt("user_crews") ?? 0;
       tasksCompleted = prefs.getInt("user_tasks") ?? 0;
     });
@@ -51,67 +53,70 @@ class _ProfileScreenState extends State<ProfileScreen> {
     prefs.setString("user_name", name);
     prefs.setString("user_email", email);
     prefs.setString("user_bio", bio);
-    prefs.setString("user_avatar", avatarUrl);
+    prefs.setString("user_avatar", avatarBase64);
     prefs.setInt("user_streak", streak);
     prefs.setInt("user_crews", crewsJoined);
     prefs.setInt("user_tasks", tasksCompleted);
   }
 
-  // ------------------------------ FIRESTORE FETCH ------------------------------
- Future<void> fetchUserData() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) {
-    setState(() => isLoading = false);
-    return;
+  // ---------------------------------------------------------------
+  // FIRESTORE FETCH
+  // ---------------------------------------------------------------
+  Future<void> fetchUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() => isLoading = false);
+      return;
+    }
+
+    final doc =
+        await FirebaseFirestore.instance.collection("users").doc(user.uid).get();
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    if (doc.exists) {
+      final data = doc.data()!;
+
+      setState(() {
+        name = data["name"] ?? "";
+        email = user.email ?? "";
+        bio = data["bio"] ?? "";
+
+        // Avatar ALWAYS local
+        avatarBase64 = prefs.getString("user_avatar") ?? "";
+
+        streak = data["streak"] ?? 0;
+        crewsJoined = data["crewsJoined"] ?? 0;
+        tasksCompleted = data["tasksCompleted"] ?? 0;
+
+        isLoading = false;
+      });
+    } else {
+      // new user fallback
+      setState(() {
+        name = user.displayName ?? "User";
+        email = user.email ?? "";
+        bio = "No bio added yet.";
+        avatarBase64 = prefs.getString("user_avatar") ?? "";
+        streak = 0;
+        crewsJoined = 0;
+        tasksCompleted = 0;
+        isLoading = false;
+      });
+
+      FirebaseFirestore.instance.collection("users").doc(user.uid).set({
+        "name": name,
+        "email": email,
+        "bio": bio,
+      }, SetOptions(merge: true));
+    }
+
+    saveLocalData();
   }
 
-  final doc = await FirebaseFirestore.instance
-      .collection("users")
-      .doc(user.uid)
-      .get();
-
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-
-  if (doc.exists) {
-    final data = doc.data()!;
-
-    setState(() {
-      name = data["name"] ?? "";
-      email = user.email ?? "";
-      bio = data["bio"] ?? "";
-
-      // Avatar always loaded from LOCAL ONLY
-      avatarUrl = prefs.getString("user_avatar") ?? "";
-
-      streak = data["user_streak"] ?? 0;
-      crewsJoined = data["user_crews"] ?? 0;
-      tasksCompleted = data["user_tasks"] ?? 0;
-
-      isLoading = false;
-    });
-  } else {
-    // First time user
-    setState(() {
-      name = user.displayName ?? "User";
-      email = user.email ?? "";
-      bio = "No bio added yet.";
-      avatarUrl = prefs.getString("user_avatar") ?? "";
-      streak = 0;
-      crewsJoined = 0;
-      tasksCompleted = 0;
-      isLoading = false;
-    });
-
-    FirebaseFirestore.instance.collection("users").doc(user.uid).set({
-      "name": name,
-      "email": email,
-      "bio": bio,
-    }, SetOptions(merge: true));
-  }
-
-  saveLocalData();
-}
-
+  // ---------------------------------------------------------------
+  // LOGOUT CONFIRM
+  // ---------------------------------------------------------------
   void confirmLogout() {
     showDialog(
       context: context,
@@ -137,18 +142,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ------------------------------ LOGOUT ------------------------------
+  // ---------------------------------------------------------------
+  // LOGOUT
+  // ---------------------------------------------------------------
   Future<void> logout() async {
     await FirebaseAuth.instance.signOut();
-    Navigator.pushNamedAndRemoveUntil(context, "/login", (route) => false);
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.clear();
+    Navigator.pushNamedAndRemoveUntil(context, "/login", (_) => false);
   }
 
-  // ------------------------------ UI ------------------------------
+  // ---------------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    ImageProvider? avatarProvider;
+    if (avatarBase64.isNotEmpty) {
+      try {
+        avatarProvider = MemoryImage(base64Decode(avatarBase64));
+      } catch (_) {
+        avatarProvider = null;
+      }
+    }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -160,7 +178,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ---------------- HEADER ----------------
+                    //--------------------------------------------------------------------
+                    // HEADER
+                    //--------------------------------------------------------------------
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -173,36 +193,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Row(
                           children: [
                             IconButton(
-                          onPressed: () {},
-                          icon: const Icon(Icons.notifications_none),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () async {
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => EditProfileScreen(
-                                  currentName: name,
-                                  currentBio: bio,
-                                  currentAvatarUrl: avatarUrl, // for now
-                                ),
-                              ),
-                            );
+                              onPressed: () {},
+                              icon: const Icon(Icons.notifications_none),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit),
+                              onPressed: () async {
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => EditProfileScreen(
+                                      currentName: name,
+                                      currentBio: bio,
+                                      currentAvatarUrl: avatarBase64,
+                                    ),
+                                  ),
+                                );
 
-                            if (result == true) {
-                              fetchUserData(); // refresh UI
-                            }
-                          },
+                                if (result == true) fetchUserData();
+                              },
+                            ),
+                          ],
                         ),
-                          ]),
-                        
                       ],
                     ),
 
                     const SizedBox(height: 20),
 
-                    // ---------------- USER CARD ----------------
+                    //--------------------------------------------------------------------
+                    // USER CARD
+                    //--------------------------------------------------------------------
                     Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
@@ -213,20 +233,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           CircleAvatar(
                             radius: 35,
-                            backgroundColor: theme.colorScheme.primary
-                                .withOpacity(0.15),
-                           backgroundImage: avatarUrl.isNotEmpty
-    ? (avatarUrl.startsWith("http")
-        ? NetworkImage(avatarUrl)
-        : FileImage(File(avatarUrl)) as ImageProvider)
-    : null,
-
-                            child: avatarUrl.isEmpty
-                                ? Icon(
-                                    Icons.person,
+                            backgroundColor:
+                                theme.colorScheme.primary.withOpacity(0.15),
+                            backgroundImage: avatarProvider,
+                            child: avatarProvider == null
+                                ? Icon(Icons.person,
                                     size: 38,
-                                    color: theme.colorScheme.primary,
-                                  )
+                                    color: theme.colorScheme.primary)
                                 : null,
                           ),
                           const SizedBox(width: 16),
@@ -253,6 +266,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 Text(
                                   bio,
                                   maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: theme.colorScheme.onSurface
@@ -268,7 +282,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     const SizedBox(height: 20),
 
-                    // ---------------- TWO STATS ----------------
                     Row(
                       children: [
                         _StatCard(
@@ -289,7 +302,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     const SizedBox(height: 20),
 
-                    // ---------------- TASK COMPLETED ----------------
                     Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
@@ -302,10 +314,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  "Overall tasks completed",
-                                  style: theme.textTheme.titleMedium,
-                                ),
+                                Text("Overall tasks completed",
+                                    style: theme.textTheme.titleMedium),
                                 Text(
                                   "Keep up your fire!",
                                   style: TextStyle(
@@ -319,8 +329,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           CircleAvatar(
                             radius: 22,
-                            backgroundColor: theme.colorScheme.primary
-                                .withOpacity(0.15),
+                            backgroundColor:
+                                theme.colorScheme.primary.withOpacity(0.15),
                             child: Text(
                               tasksCompleted.toString(),
                               style: TextStyle(
@@ -329,7 +339,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 fontSize: 16,
                               ),
                             ),
-                          ),
+                          )
                         ],
                       ),
                     ),
@@ -351,8 +361,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const SettingsScreen(),
-                          ),
+                              builder: (context) => const SettingsScreen()),
                         );
                       },
                     ),
@@ -373,10 +382,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
-
-// --------------------------------------------------------------------------
-// CARD WIDGETS
-// --------------------------------------------------------------------------
 
 class _StatCard extends StatelessWidget {
   final IconData icon;
@@ -430,8 +435,7 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// --------------------------------------------------------------------------
-
+// ==========================================================================
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final Color? iconColor;
@@ -450,6 +454,7 @@ class _SettingsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(

@@ -1,15 +1,15 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final String currentName;
   final String currentBio;
-  final String currentAvatarUrl;
+  final String currentAvatarUrl; // base64 string
 
   const EditProfileScreen({
     super.key,
@@ -27,119 +27,101 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController bioController;
 
   File? newAvatarFile;
-  String avatarUrl = "";
+  String avatarBase64 = ""; // safe storage
 
   @override
   void initState() {
     super.initState();
     nameController = TextEditingController(text: widget.currentName);
     bioController = TextEditingController(text: widget.currentBio);
-    avatarUrl = widget.currentAvatarUrl;
+    avatarBase64 = widget.currentAvatarUrl; // may be empty
   }
 
-  // -------------------------------------------------------------------
-  // ✔ PICK AVATAR FROM GALLERY
-  // -------------------------------------------------------------------
   Future<void> pickAvatar() async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 55, // compress to make Base64 small
+    );
 
     if (picked != null) {
-      setState(() {
-        newAvatarFile = File(picked.path);
-      });
+      newAvatarFile = File(picked.path);
 
-      /// For now we WON'T upload to Firebase Storage.
-      /// We only store local path (demo mode)
-      avatarUrl = picked.path;
+      final bytes = await newAvatarFile!.readAsBytes();
+      setState(() {
+        avatarBase64 = base64Encode(bytes); // safe forever
+      });
     }
   }
 
-  // -------------------------------------------------------------------
-  // ✔ SAVE PROFILE DATA
-  // -------------------------------------------------------------------
-Future<void> saveProfile() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
+  Future<void> saveProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-  String name = nameController.text.trim();
-  String bio = bioController.text.trim();
+    final name = nameController.text.trim();
+    final bio = bioController.text.trim();
 
-  if (name.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Name cannot be empty!")),
-    );
-    return;
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Name cannot be empty!")),
+      );
+      return;
+    }
+
+
+    await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
+      "name": name,
+      "bio": bio,
+      "avatarBase64": avatarBase64, // SAFE value
+    }, SetOptions(merge: true));
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setString("user_name", name);
+    prefs.setString("user_bio", bio);
+    prefs.setString("user_avatar", avatarBase64); // SAFE local save
+
+    Navigator.pop(context, true); // return success
   }
-
-  // --------------------------
-  // 🚫 NO Firebase Storage
-  // 🚫 NO uploading
-  // ✔ Avatar saved locally ONLY
-  // --------------------------
-
-  String? localAvatarPath = avatarUrl; // This is a device path
-
-  // -------------------------
-  // UPDATE FIRESTORE (no avatar)
-  // -------------------------
-  await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
-    "name": name,
-    "bio": bio,
-  }, SetOptions(merge: true));
-
-  // -------------------------
-  // UPDATE LOCAL STORAGE
-  // -------------------------
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  prefs.setString("user_name", name);
-  prefs.setString("user_bio", bio);
-
-  // Save avatar path locally (ONLY local)
-  prefs.setString("user_avatar", localAvatarPath ?? "");
-
-  Navigator.pop(context, true);
-}
-
 
   // -------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    ImageProvider? avatarProvider;
+    if (avatarBase64.isNotEmpty) {
+      try {
+        avatarProvider = MemoryImage(base64Decode(avatarBase64));
+      } catch (_) {
+        avatarProvider = null;
+      }
+    }
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Edit Profile"),
-      ),
+      appBar: AppBar(title: const Text("Edit Profile")),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // ---------------------------------------------------
-            // ✔ AVATAR PICKER
-            // ---------------------------------------------------
+
             GestureDetector(
               onTap: pickAvatar,
               child: CircleAvatar(
                 radius: 50,
                 backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
-                backgroundImage: newAvatarFile != null
-                    ? FileImage(newAvatarFile!)
-                    : (avatarUrl.isNotEmpty
-                        ? FileImage(File(avatarUrl)) as ImageProvider
-                        : null),
-                child: avatarUrl.isEmpty && newAvatarFile == null
-                    ? Icon(Icons.camera_alt,
-                        size: 32, color: theme.colorScheme.primary)
+                backgroundImage: avatarProvider,
+                child: avatarProvider == null
+                    ? Icon(
+                        Icons.camera_alt,
+                        size: 32,
+                        color: theme.colorScheme.primary,
+                      )
                     : null,
               ),
             ),
 
             const SizedBox(height: 30),
 
-            // ---------------------------------------------------
-            // ✔ NAME FIELD
-            // ---------------------------------------------------
             TextField(
               controller: nameController,
               decoration: InputDecoration(
@@ -152,9 +134,6 @@ Future<void> saveProfile() async {
 
             const SizedBox(height: 20),
 
-            // ---------------------------------------------------
-            // ✔ BIO FIELD
-            // ---------------------------------------------------
             TextField(
               controller: bioController,
               maxLines: 3,
@@ -168,9 +147,6 @@ Future<void> saveProfile() async {
 
             const SizedBox(height: 30),
 
-            // ---------------------------------------------------
-            // ✔ SAVE BUTTON
-            // ---------------------------------------------------
             SizedBox(
               width: double.infinity,
               height: 50,

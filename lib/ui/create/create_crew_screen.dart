@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 class CreateCrewScreen extends StatefulWidget {
   const CreateCrewScreen({super.key});
@@ -29,6 +32,68 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
     return "${letters[rand.nextInt(26)]}${letters[rand.nextInt(26)]}${letters[rand.nextInt(26)]}"
         "-${nums[rand.nextInt(10)]}${nums[rand.nextInt(10)]}${nums[rand.nextInt(10)]}";
   }
+
+Future<void> createCrew() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("You must be logged in")),
+    );
+    return;
+  }
+
+  final name = nameController.text.trim();
+  final desc = descController.text.trim();
+
+  if (name.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Crew name cannot be empty")),
+    );
+    return;
+  }
+
+  try {
+    final crewId = FirebaseFirestore.instance.collection("crews").doc().id;
+
+    await FirebaseFirestore.instance.collection("crews").doc(crewId).set({
+      "crewId": crewId,
+      "name": name,
+      "description": desc,
+      "isPrivate": isPrivate,
+      "privateCode": isPrivate ? privateCode : "",
+      "createdBy": user.uid,
+      "createdAt": DateTime.now(),
+      "members": [user.uid],
+      "memberCount": 1,
+    });
+
+    // SUCCESS POPUP
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Crew created successfully!"),
+        backgroundColor: Colors.green,
+      ),
+    );
+
+    // CLEAR ALL FIELDS
+    nameController.clear();
+    descController.clear();
+    setState(() {
+      isPrivate = false;
+      privateCode = _generateCode();
+    });
+
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Failed to create crew: $e"),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -199,9 +264,7 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        onPressed: () {
-                          // later: send to Firebase
-                        },
+                        onPressed: createCrew,
                         child: const Text(
                           "Create Crew",
                           style: TextStyle(

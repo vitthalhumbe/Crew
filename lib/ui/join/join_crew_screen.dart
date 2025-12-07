@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class JoinCrewScreen extends StatefulWidget {
   const JoinCrewScreen({super.key});
@@ -9,28 +11,117 @@ class JoinCrewScreen extends StatefulWidget {
 
 class _JoinCrewScreenState extends State<JoinCrewScreen> {
   int selectedTab = 0; // 0 = Public, 1 = Private
-
   final TextEditingController joinCodeController = TextEditingController();
 
-  final List<Map<String, dynamic>> publicCrews = [
-    {
-      "name": "Kabbadi Practice Group",
-      "members": 87,
-    },
-    {
-      "name": "App Development Guidance",
-      "members": 132,
-    },
-    {
-      "name": "One Piece Theory Discussion",
-      "members": 76,
-    },
-    {
-      "name": "Learn How to Draw By Mr.Drawer34",
-      "members": 54,
-    },
-  ];
+  final Stream<QuerySnapshot> publicCrewsStream = FirebaseFirestore.instance
+      .collection("crews")
+      .where("isPrivate", isEqualTo: false)
+      .snapshots();
 
+  // =============================================================
+  // JOIN PUBLIC CREW
+  // =============================================================
+  Future<void> joinPublicCrew(DocumentSnapshot crew) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    List<dynamic> members = crew["members"];
+    final userRef =
+        FirebaseFirestore.instance.collection("users").doc(user.uid);
+
+    // Prevent duplicate join
+    if (members.contains(user.uid)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("You're already a member of ${crew["name"]}!")),
+      );
+      return;
+    }
+
+    final userDoc = await userRef.get();
+    List<dynamic> userCrews = userDoc.data()?["crews"] ?? [];
+
+    if (userCrews.contains(crew.id)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Already joined this crew!")),
+      );
+      return;
+    }
+
+    // Add user to crew
+    await crew.reference.update({
+      "members": FieldValue.arrayUnion([user.uid])
+    });
+
+    // Add crew to user profile
+    await userRef.set({
+      "crewsJoined": FieldValue.increment(1),
+      "crews": FieldValue.arrayUnion([crew.id])
+    }, SetOptions(merge: true));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Joined ${crew["name"]}!")),
+    );
+  }
+
+  // =============================================================
+  // JOIN PRIVATE CREW
+  // =============================================================
+  Future<void> joinPrivateCrew() async {
+    String code = joinCodeController.text.trim();
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (code.isEmpty || user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Enter a valid code")),
+      );
+      return;
+    }
+
+    final query = await FirebaseFirestore.instance
+        .collection("crews")
+        .where("privateCode", isEqualTo: code)
+        .limit(1)
+        .get();
+
+    if (query.docs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Invalid code!")),
+      );
+      return;
+    }
+
+    final crew = query.docs.first;
+    List<dynamic> members = crew["members"];
+
+    // Already joined check
+    if (members.contains(user.uid)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("You already joined ${crew["name"]}!")),
+      );
+      return;
+    }
+
+    // Add user to crew
+    await crew.reference.update({
+      "members": FieldValue.arrayUnion([user.uid])
+    });
+
+    // Add crew to user
+    FirebaseFirestore.instance.collection("users").doc(user.uid).set({
+      "crewsJoined": FieldValue.increment(1),
+      "crews": FieldValue.arrayUnion([crew.id])
+    }, SetOptions(merge: true));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Joined ${crew["name"]} successfully!")),
+    );
+
+    Navigator.pop(context);
+  }
+
+  // =============================================================
+  // UI
+  // =============================================================
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -41,7 +132,6 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             // -------------------- HEADER --------------------
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -94,9 +184,9 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
     );
   }
 
-  // ------------------------------------------------------------
+  // =============================================================
   // TAB BUTTON
-  // ------------------------------------------------------------
+  // =============================================================
   Widget _buildTab(String text, int index) {
     final theme = Theme.of(context);
     final isSelected = selectedTab == index;
@@ -130,108 +220,117 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
     );
   }
 
-  // ------------------------------------------------------------
+  // =============================================================
   // PUBLIC CREWS LIST
-  // ------------------------------------------------------------
+  // =============================================================
   Widget _buildPublicCrewsList(ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        children: [
-          // Search bar (UI only)
-          TextField(
-            decoration: InputDecoration(
-              hintText: "Search for a crew...",
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+    final user = FirebaseAuth.instance.currentUser;
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: publicCrewsStream,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final crews = snapshot.data!.docs;
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(20),
+          itemCount: crews.length,
+          itemBuilder: (context, i) {
+            final crew = crews[i];
+            List<dynamic> members = crew["members"];
+            bool alreadyJoined = members.contains(user!.uid);
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(14),
               ),
-            ),
-          ),
-
-          const SizedBox(height: 14),
-
-          Expanded(
-            child: ListView.builder(
-              itemCount: publicCrews.length,
-              itemBuilder: (context, index) {
-                final crew = publicCrews[index];
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 14),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 45,
+                    height: 45,
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.group, color: Colors.purple),
                   ),
-                  child: Row(
-                    children: [
-                      // Avatar Circle
-                      Container(
-                        width: 45,
-                        height: 45,
-                        decoration: BoxDecoration(
-                          color: Colors.purple.withOpacity(0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.group, color: Colors.purple),
-                      ),
 
-                      const SizedBox(width: 14),
+                  const SizedBox(width: 14),
 
-                      // Texts
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              crew["name"],
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "${crew["members"]} members",
-                              style: TextStyle(
-                                color: theme.colorScheme.onSurface
-                                    .withOpacity(0.6),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // View button
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          "View",
-                          style: TextStyle(
-                            color: theme.colorScheme.primary,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          crew["name"],
+                          style: theme.textTheme.bodyLarge?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                      )
-                    ],
+                        const SizedBox(height: 4),
+                        Text(
+                          "${members.length} members",
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+
+                  alreadyJoined
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            "Joined",
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        )
+                      : GestureDetector(
+                          onTap: () => joinPublicCrew(crew),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              "Join",
+                              style: TextStyle(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
-  // ------------------------------------------------------------
-  // PRIVATE CREW JOIN
-  // ------------------------------------------------------------
+  // =============================================================
+  // PRIVATE JOIN UI
+  // =============================================================
   Widget _buildPrivateCrewView(ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -244,7 +343,7 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
           TextField(
             controller: joinCodeController,
             decoration: InputDecoration(
-              hintText: "e.g. 8AB-X34-T12",
+              hintText: "e.g. ABX-345",
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -264,7 +363,7 @@ class _JoinCrewScreenState extends State<JoinCrewScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              onPressed: () {},
+              onPressed: joinPrivateCrew,
               child: const Text(
                 "Join Crew",
                 style: TextStyle(
