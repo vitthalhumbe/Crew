@@ -136,7 +136,6 @@ class _HomeScreenState extends State<HomeScreen> {
   // DYNAMIC CREW CARD FROM FIRESTORE
   // ------------------------------------------------------------------
   Widget _buildCrewItem(String crewId) {
-    final theme = Theme.of(context);
 
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance

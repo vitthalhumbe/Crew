@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:testing/ui/tasks/task_list_screen.dart';
 
 class CrewOverviewTab extends StatelessWidget {
   final String crewId;
@@ -69,7 +70,14 @@ class CrewOverviewTab extends StatelessWidget {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => TaskListScreen(crewId: crewId),
+              ),
+            );
+                  },
                   child: const Text("Task List →"),
                 ),
               )
